@@ -3,8 +3,8 @@ package parser_test
 import (
 	"testing"
 
-	"github.com/bellbm/graphql-parser/ast"
-	"github.com/bellbm/graphql-parser/parser"
+	"github.com/brian-bell/graphql-parser/ast"
+	"github.com/brian-bell/graphql-parser/parser"
 )
 
 func TestComments_OffByDefault(t *testing.T) {

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"unicode/utf8"
 
-	"github.com/bellbm/graphql-parser/ast"
+	"github.com/brian-bell/graphql-parser/ast"
 )
 
 // Lexer is a synchronous, single-token-lookahead tokenizer for a [ast.Source].

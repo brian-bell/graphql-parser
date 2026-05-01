@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/bellbm/graphql-parser/parser"
+	"github.com/brian-bell/graphql-parser/parser"
 )
 
 // fuzzSeeds are a representative slice of inputs (mix of valid and broken)

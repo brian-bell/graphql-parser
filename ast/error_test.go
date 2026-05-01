@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/bellbm/graphql-parser/ast"
+	"github.com/brian-bell/graphql-parser/ast"
 )
 
 func TestSyntaxError_Header(t *testing.T) {

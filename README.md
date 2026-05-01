@@ -6,9 +6,9 @@ AST. Supports both grammars from the
 documents and the type-system / SDL — in three small packages:
 
 ```
-github.com/bellbm/graphql-parser/ast    // node types, Source, Position, Loc, Walk
-github.com/bellbm/graphql-parser/lexer  // tokenizer
-github.com/bellbm/graphql-parser/parser // Parse, ParseSource, ParseValue, ParseConstValue, ParseType
+github.com/brian-bell/graphql-parser/ast    // node types, Source, Position, Loc, Walk
+github.com/brian-bell/graphql-parser/lexer  // tokenizer
+github.com/brian-bell/graphql-parser/parser // Parse, ParseSource, ParseValue, ParseConstValue, ParseType
 ```
 
 Validation, execution, and printing are out of scope.
@@ -16,7 +16,7 @@ Validation, execution, and printing are out of scope.
 ## Install
 
 ```sh
-go get github.com/bellbm/graphql-parser
+go get github.com/brian-bell/graphql-parser
 ```
 
 Requires Go 1.26+.
@@ -26,7 +26,7 @@ Requires Go 1.26+.
 ### Parse a document
 
 ```go
-import "github.com/bellbm/graphql-parser/parser"
+import "github.com/brian-bell/graphql-parser/parser"
 
 doc, err := parser.Parse(`
     query GetUser($id: ID!) {
@@ -73,7 +73,7 @@ report the original file's coordinates.
 `ast.Walk` and `ast.Inspect` traverse a node depth-first in source order:
 
 ```go
-import "github.com/bellbm/graphql-parser/ast"
+import "github.com/brian-bell/graphql-parser/ast"
 
 ast.Inspect(doc, func(n ast.Node) bool {
     if f, ok := n.(*ast.Field); ok {

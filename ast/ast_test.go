@@ -3,7 +3,7 @@ package ast_test
 import (
 	"testing"
 
-	"github.com/bellbm/graphql-parser/ast"
+	"github.com/brian-bell/graphql-parser/ast"
 )
 
 // Compile-time interface conformance for every concrete node type.

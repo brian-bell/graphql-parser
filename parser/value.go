@@ -3,8 +3,8 @@ package parser
 import (
 	"fmt"
 
-	"github.com/bellbm/graphql-parser/ast"
-	"github.com/bellbm/graphql-parser/lexer"
+	"github.com/brian-bell/graphql-parser/ast"
+	"github.com/brian-bell/graphql-parser/lexer"
 )
 
 // parseValueLiteral parses a Value (or ConstValue when isConst is true).

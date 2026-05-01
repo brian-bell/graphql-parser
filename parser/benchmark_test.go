@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/bellbm/graphql-parser/parser"
+	"github.com/brian-bell/graphql-parser/parser"
 )
 
 const tinyQuery = `query GetUser($id: ID!) { user(id: $id) { id name email } }`

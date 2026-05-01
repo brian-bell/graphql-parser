@@ -1,6 +1,6 @@
 package parser
 
-import "github.com/bellbm/graphql-parser/ast"
+import "github.com/brian-bell/graphql-parser/ast"
 
 // Parse parses a GraphQL source document and returns its [ast.Document].
 // The source is wrapped in an ast.Source named "GraphQL" for error messages;

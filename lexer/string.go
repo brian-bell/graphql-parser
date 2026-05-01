@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"unicode/utf8"
 
-	"github.com/bellbm/graphql-parser/ast"
+	"github.com/brian-bell/graphql-parser/ast"
 )
 
 // lexString reads a string token starting at l.pos (which must point at '"').

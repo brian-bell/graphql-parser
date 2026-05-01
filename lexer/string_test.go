@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/bellbm/graphql-parser/ast"
-	"github.com/bellbm/graphql-parser/lexer"
+	"github.com/brian-bell/graphql-parser/ast"
+	"github.com/brian-bell/graphql-parser/lexer"
 )
 
 func TestLexer_String_Empty(t *testing.T) {

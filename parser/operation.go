@@ -1,8 +1,8 @@
 package parser
 
 import (
-	"github.com/bellbm/graphql-parser/ast"
-	"github.com/bellbm/graphql-parser/lexer"
+	"github.com/brian-bell/graphql-parser/ast"
+	"github.com/brian-bell/graphql-parser/lexer"
 )
 
 // parseShorthandOperation parses a bare "{ ... }" as an anonymous query.

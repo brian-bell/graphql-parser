@@ -8,8 +8,8 @@ package parser
 import (
 	"fmt"
 
-	"github.com/bellbm/graphql-parser/ast"
-	"github.com/bellbm/graphql-parser/lexer"
+	"github.com/brian-bell/graphql-parser/ast"
+	"github.com/brian-bell/graphql-parser/lexer"
 )
 
 // parser is the internal recursive-descent driver. It is not safe for

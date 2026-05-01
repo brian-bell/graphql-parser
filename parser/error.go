@@ -3,7 +3,7 @@ package parser
 import (
 	"strings"
 
-	"github.com/bellbm/graphql-parser/ast"
+	"github.com/brian-bell/graphql-parser/ast"
 )
 
 // ParseError is the syntax-error type produced by all Parse* entry points.

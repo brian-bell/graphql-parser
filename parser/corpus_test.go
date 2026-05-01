@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/bellbm/graphql-parser/ast"
-	"github.com/bellbm/graphql-parser/parser"
+	"github.com/brian-bell/graphql-parser/ast"
+	"github.com/brian-bell/graphql-parser/parser"
 )
 
 // This file ports a representative slice of the graphql-js parser /
