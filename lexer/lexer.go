@@ -102,7 +102,7 @@ func (l *Lexer) lex() (Token, error) {
 				l.pos += 3
 				return tok, nil
 			}
-			return Token{}, l.errAt(l.pos, fmt.Sprintf("Cannot parse the unexpected character %s.", quoteChar(c)))
+			return Token{}, l.unexpectedCharErr()
 		case '#':
 			tok, ok, err := l.lexComment()
 			if err != nil {
@@ -121,8 +121,24 @@ func (l *Lexer) lex() (Token, error) {
 		if isNameStart(c) {
 			return l.lexName(), nil
 		}
-		return Token{}, l.errAt(l.pos, fmt.Sprintf("Cannot parse the unexpected character %s.", quoteChar(c)))
+		return Token{}, l.unexpectedCharErr()
 	}
+}
+
+// unexpectedCharErr builds an "unexpected character" error for the byte at
+// l.pos and advances l.pos past it (by one rune width, falling back to one
+// byte for invalid encodings). Advancing the position is what guarantees the
+// lexer makes progress on retry, which is what error recovery in the parser
+// needs to avoid an infinite loop on the same offending byte.
+func (l *Lexer) unexpectedCharErr() *ast.SyntaxError {
+	pos := l.pos
+	c := l.body[l.pos]
+	_, w := utf8.DecodeRuneInString(l.body[l.pos:])
+	if w < 1 {
+		w = 1
+	}
+	l.pos += w
+	return l.errAt(pos, fmt.Sprintf("Cannot parse the unexpected character %s.", quoteChar(c)))
 }
 
 func (l *Lexer) singleByte(k Kind) Token {
