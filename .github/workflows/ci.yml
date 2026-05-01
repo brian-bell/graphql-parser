@@ -1,0 +1,71 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    name: test (${{ matrix.os }} / go ${{ matrix.go }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        go: ['1.25.x', '1.26.x']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ matrix.go }}
+          check-latest: true
+      - run: go vet ./...
+      - run: go build ./...
+      - run: go test -race ./...
+
+  gofmt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.x'
+          check-latest: true
+      - name: gofmt
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            echo "::error::Files need gofmt:"
+            echo "$unformatted"
+            exit 1
+          fi
+
+  fuzz-quick:
+    name: fuzz (30s/target)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.x'
+          check-latest: true
+      - run: go test -fuzz=FuzzParse$ -fuzztime=30s -run=- ./parser/
+      - run: go test -fuzz=FuzzParseWithRecovery$ -fuzztime=30s -run=- ./parser/
+      - run: go test -fuzz=FuzzParseValue$ -fuzztime=15s -run=- ./parser/
+      - run: go test -fuzz=FuzzParseType$ -fuzztime=15s -run=- ./parser/
+
+  bench:
+    name: benchmarks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.x'
+          check-latest: true
+      - run: go test -run=- -bench=. -benchmem -count=3 ./parser/ | tee bench.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bench-output
+          path: bench.txt
