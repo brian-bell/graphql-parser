@@ -15,11 +15,12 @@ import (
 // parser is the internal recursive-descent driver. It is not safe for
 // concurrent use.
 type parser struct {
-	source  *ast.Source
-	lex     *lexer.Lexer
-	cfg     *config
-	lastEnd int // byte offset just past the last consumed token
-	errors  []*ast.SyntaxError
+	source         *ast.Source
+	lex            *lexer.Lexer
+	cfg            *config
+	lastEnd        int // byte offset just past the last consumed token
+	errors         []*ast.SyntaxError
+	pendingLeading []*ast.Comment
 }
 
 func newParser(src *ast.Source, opts []Option) *parser {
@@ -31,13 +32,17 @@ func newParser(src *ast.Source, opts []Option) *parser {
 	return &parser{source: src, lex: l, cfg: cfg}
 }
 
-// peek returns the next token without consuming it.
+// peek returns the next non-comment token without consuming it. When
+// comment preservation is on, any COMMENT tokens at the current position
+// are drained into p.pendingLeading first.
 func (p *parser) peek() (lexer.Token, error) {
+	p.drainComments()
 	return p.lex.Peek()
 }
 
-// advance consumes and returns the next token, updating lastEnd.
+// advance consumes and returns the next non-comment token, updating lastEnd.
 func (p *parser) advance() (lexer.Token, error) {
+	p.drainComments()
 	tok, err := p.lex.Next()
 	if err != nil {
 		return tok, err

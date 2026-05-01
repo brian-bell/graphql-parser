@@ -28,6 +28,10 @@ func (p *parser) parseDocument() (*ast.Document, error) {
 			break
 		}
 		defStart := tok.Start
+		// Capture the leading-comment buffer for THIS definition before any
+		// inner parser (e.g. its first FieldDefinition) can take it.
+		defLeading := p.pendingLeading
+		p.pendingLeading = nil
 		def, err := p.parseDefinition()
 		if err != nil {
 			if !p.recordError(err) {
@@ -38,6 +42,7 @@ func (p *parser) parseDocument() (*ast.Document, error) {
 			defs = append(defs, &ast.BadDefinition{Err: se, Loc: p.loc(defStart)})
 			continue
 		}
+		attachLeadingComments(def, defLeading)
 		defs = append(defs, def)
 	}
 	if len(defs) == 0 {

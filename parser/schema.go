@@ -315,6 +315,8 @@ func (p *parser) parseFieldsDefinition() (ast.FieldDefinitionList, error) {
 }
 
 func (p *parser) parseFieldDefinition() (*ast.FieldDefinition, error) {
+	leading := p.pendingLeading
+	p.pendingLeading = nil
 	desc, descStart, err := p.parseOptionalDescription()
 	if err != nil {
 		return nil, err
@@ -342,14 +344,18 @@ func (p *parser) parseFieldDefinition() (*ast.FieldDefinition, error) {
 	if desc == nil {
 		start = name.Start
 	}
-	return &ast.FieldDefinition{
+	fd := &ast.FieldDefinition{
 		Description: desc,
 		Name:        name.Value,
 		Arguments:   args,
 		Type:        t,
 		Directives:  dirs,
 		Loc:         p.loc(start),
-	}, nil
+	}
+	if len(leading) > 0 {
+		fd.Comments = &ast.CommentGroup{Leading: leading}
+	}
+	return fd, nil
 }
 
 func (p *parser) parseArgumentsDefinition() (ast.InputValueList, error) {
@@ -388,6 +394,8 @@ func (p *parser) parseArgumentsDefinition() (ast.InputValueList, error) {
 }
 
 func (p *parser) parseInputValueDefinition() (*ast.InputValueDefinition, error) {
+	leading := p.pendingLeading
+	p.pendingLeading = nil
 	desc, descStart, err := p.parseOptionalDescription()
 	if err != nil {
 		return nil, err
@@ -421,14 +429,18 @@ func (p *parser) parseInputValueDefinition() (*ast.InputValueDefinition, error) 
 	if desc == nil {
 		start = name.Start
 	}
-	return &ast.InputValueDefinition{
+	iv := &ast.InputValueDefinition{
 		Description:  desc,
 		Name:         name.Value,
 		Type:         t,
 		DefaultValue: def,
 		Directives:   dirs,
 		Loc:          p.loc(start),
-	}, nil
+	}
+	if len(leading) > 0 {
+		iv.Comments = &ast.CommentGroup{Leading: leading}
+	}
+	return iv, nil
 }
 
 func (p *parser) parseUnionTypeDefinition(desc *ast.StringValue, descStart int) (ast.Definition, bool, error) {
@@ -546,6 +558,8 @@ func (p *parser) parseEnumValuesDefinition() (ast.EnumValueList, error) {
 }
 
 func (p *parser) parseEnumValueDefinition() (*ast.EnumValueDefinition, error) {
+	leading := p.pendingLeading
+	p.pendingLeading = nil
 	desc, descStart, err := p.parseOptionalDescription()
 	if err != nil {
 		return nil, err
@@ -566,12 +580,16 @@ func (p *parser) parseEnumValueDefinition() (*ast.EnumValueDefinition, error) {
 	if desc == nil {
 		start = name.Start
 	}
-	return &ast.EnumValueDefinition{
+	ev := &ast.EnumValueDefinition{
 		Description: desc,
 		Name:        name.Value,
 		Directives:  dirs,
 		Loc:         p.loc(start),
-	}, nil
+	}
+	if len(leading) > 0 {
+		ev.Comments = &ast.CommentGroup{Leading: leading}
+	}
+	return ev, nil
 }
 
 func (p *parser) parseInputObjectTypeDefinition(desc *ast.StringValue, descStart int) (ast.Definition, bool, error) {
