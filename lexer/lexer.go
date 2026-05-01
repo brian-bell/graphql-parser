@@ -113,7 +113,7 @@ func (l *Lexer) lex() (Token, error) {
 			}
 			continue
 		case '"':
-			return Token{}, l.errAt(l.pos, "string literals are not yet supported in phase 2")
+			return l.lexString()
 		}
 		if c == '-' || isDigit(c) {
 			return l.lexNumber()
