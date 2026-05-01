@@ -10,14 +10,30 @@ func Parse(body string, opts ...Option) (*ast.Document, error) {
 }
 
 // ParseSource parses a GraphQL document from src.
+//
+// In the default fail-fast mode the first syntax error aborts and the
+// returned *ast.Document is nil. With [WithRecovery], the parser collects
+// every syntax error it encounters and returns a partial document plus a
+// non-nil [ParseErrors]; the document may contain Bad{Definition,Field,Value,
+// Type} placeholder nodes where the parser had to resynchronize.
 func ParseSource(src *ast.Source, opts ...Option) (*ast.Document, error) {
 	p := newParser(src, opts)
 	doc, err := p.parseDocument()
 	if err != nil {
-		return nil, err
+		if p.cfg.recovery {
+			_ = p.recordError(err)
+		} else {
+			return nil, err
+		}
 	}
 	if err := p.expectEOF(); err != nil {
-		return nil, err
+		if !p.cfg.recovery {
+			return nil, err
+		}
+		_ = p.recordError(err)
+	}
+	if p.cfg.recovery && len(p.errors) > 0 {
+		return doc, ParseErrors(p.errors)
 	}
 	return doc, nil
 }

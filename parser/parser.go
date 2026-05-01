@@ -19,6 +19,7 @@ type parser struct {
 	lex     *lexer.Lexer
 	cfg     *config
 	lastEnd int // byte offset just past the last consumed token
+	errors  []*ast.SyntaxError
 }
 
 func newParser(src *ast.Source, opts []Option) *parser {

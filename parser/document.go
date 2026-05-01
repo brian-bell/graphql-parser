@@ -17,14 +17,26 @@ func (p *parser) parseDocument() (*ast.Document, error) {
 	for {
 		tok, err := p.peek()
 		if err != nil {
+			if p.cfg.recovery {
+				_ = p.recordError(err)
+				p.skipToDefinitionStart()
+				continue
+			}
 			return nil, err
 		}
 		if tok.Kind == lexer.EOF {
 			break
 		}
+		defStart := tok.Start
 		def, err := p.parseDefinition()
 		if err != nil {
-			return nil, err
+			if !p.recordError(err) {
+				return nil, err
+			}
+			se, _ := err.(*ast.SyntaxError)
+			p.skipToDefinitionStart()
+			defs = append(defs, &ast.BadDefinition{Err: se, Loc: p.loc(defStart)})
+			continue
 		}
 		defs = append(defs, def)
 	}

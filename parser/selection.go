@@ -16,6 +16,11 @@ func (p *parser) parseSelectionSet() (*ast.SelectionSet, error) {
 	for {
 		tok, err := p.peek()
 		if err != nil {
+			if p.cfg.recovery {
+				_ = p.recordError(err)
+				p.skipToSelectionStart()
+				continue
+			}
 			return nil, err
 		}
 		if tok.Kind == lexer.RBRACE {
@@ -24,9 +29,16 @@ func (p *parser) parseSelectionSet() (*ast.SelectionSet, error) {
 		if tok.Kind == lexer.EOF {
 			return nil, p.errAtTok(tok, "Expected '}', found <EOF>.")
 		}
+		selStart := tok.Start
 		s, err := p.parseSelection()
 		if err != nil {
-			return nil, err
+			if !p.recordError(err) {
+				return nil, err
+			}
+			se, _ := err.(*ast.SyntaxError)
+			p.skipToSelectionStart()
+			sels = append(sels, &ast.BadField{Err: se, Loc: p.loc(selStart)})
+			continue
 		}
 		sels = append(sels, s)
 	}
