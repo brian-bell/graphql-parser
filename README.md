@@ -6,7 +6,7 @@ AST. Supports both grammars from the
 documents and the type-system / SDL — in three small packages:
 
 ```
-github.com/brian-bell/graphql-parser/ast    // node types, Source, Position, Loc, Walk
+github.com/brian-bell/graphql-parser/ast    // node types, Source, Position, Loc, Walk, AST helpers
 github.com/brian-bell/graphql-parser/lexer  // tokenizer
 github.com/brian-bell/graphql-parser/parser // Parse, ParseSource, ParseSchema, ParseSchemaSource, ParseValue, ParseConstValue, ParseType
 ```
@@ -69,6 +69,23 @@ t, err := parser.ParseType(`[String!]!`)
 
 `ParseConstValue` is the const-context variant; it rejects `$variables` at
 any nesting depth. Use it for default-value parsing.
+
+### Inspect common AST values
+
+The `ast` package includes small helpers for common SDL tooling tasks:
+
+```go
+import "github.com/brian-bell/graphql-parser/ast"
+
+fmt.Println(ast.TypeString(t))    // [String!]!
+fmt.Println(ast.NamedTypeName(t)) // String
+
+reason, ok := ast.DirectiveStringArg(enumValue.Directives, "deprecated", "reason")
+```
+
+`DirectiveStringArg` returns the decoded string value and `true` only when the
+argument is present and is a string literal. An explicit empty string returns
+`("", true)`; missing, nil, or non-string values return `("", false)`.
 
 ### Position-rich errors
 

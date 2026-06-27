@@ -31,7 +31,7 @@ LSP can depend on AST types without dragging in the parser.
 
 ### Package responsibilities
 
-- `ast/` - `Node`, `Definition`, `Selection`, `Value`, `Type` interfaces; concrete pointer-receiver structs for every spec production; `Source`, `Position`, `Loc` with a lazy line-start index; `BlockStringValue` helper; `Walk`/`Inspect`; `SyntaxError` with the graphql-js-style snippet renderer.
+- `ast/` - `Node`, `Definition`, `Selection`, `Value`, `Type` interfaces; concrete pointer-receiver structs for every spec production; `Source`, `Position`, `Loc` with a lazy line-start index; `BlockStringValue`, `TypeString`, `NamedTypeName`, and `DirectiveStringArg` helpers; `Walk`/`Inspect`; `SyntaxError` with the graphql-js-style snippet renderer.
 - `lexer/` - synchronous, single-token-lookahead, hand-written tokenizer. `Token` carries byte offsets plus a `Value` that is a sub-slice of source for `NAME`/`INT`/`FLOAT`. `STRING` tokens own their decoded value. `Lexer.PreserveComments` is the internal switch the parser flips for `WithComments`.
 - `parser/` - recursive descent. Public API is `Parse`, `ParseSource`, `ParseSchema`, `ParseSchemaSource`, `ParseValue`, `ParseConstValue`, `ParseType`, plus `WithRecovery()` and `WithComments()`. Everything else is unexported.
 
