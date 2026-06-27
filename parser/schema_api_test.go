@@ -36,6 +36,8 @@ func TestParseSchema_RejectsExecutableDefinitions(t *testing.T) {
 		body string
 	}{
 		{name: "named query", body: `query MyQuery { hello }`},
+		{name: "named mutation", body: `mutation Update { update }`},
+		{name: "named subscription", body: `subscription Events { events }`},
 		{name: "shorthand query", body: `{ hello }`},
 		{name: "fragment", body: `fragment UserFields on User { id }`},
 	}
@@ -154,14 +156,17 @@ type Query {
 }
 
 func TestParseSchema_WithRecoveryAggregatesSchemaOnlyErrors(t *testing.T) {
-	body := `type Query { x: String } query Q { x } fragment F on Query { x }`
+	src := &ast.Source{
+		Body: `type Query { x: String } query Q { x } fragment F on Query { x }`,
+		Name: "schema.graphql",
+	}
 
-	doc, err := parser.ParseSchema(body, parser.WithRecovery())
+	doc, err := parser.ParseSchemaSource(src, parser.WithRecovery())
 	if err == nil {
-		t.Fatal("ParseSchema returned nil error")
+		t.Fatal("ParseSchemaSource returned nil error")
 	}
 	if doc == nil {
-		t.Fatal("ParseSchema returned nil document; want recovered document")
+		t.Fatal("ParseSchemaSource returned nil document; want recovered document")
 	}
 	var parseErrs parser.ParseErrors
 	if !errors.As(err, &parseErrs) {
@@ -172,5 +177,17 @@ func TestParseSchema_WithRecoveryAggregatesSchemaOnlyErrors(t *testing.T) {
 	}
 	if len(doc.Definitions) != 3 {
 		t.Fatalf("definitions = %d; want 3", len(doc.Definitions))
+	}
+	wantPositions := []ast.Position{
+		{Line: 1, Column: 26},
+		{Line: 1, Column: 40},
+	}
+	for i, parseErr := range parseErrs {
+		if parseErr.Source != src {
+			t.Fatalf("error[%d] source = %v; want provided source", i, parseErr.Source)
+		}
+		if pos := parseErr.Position(); pos != wantPositions[i] {
+			t.Fatalf("error[%d] position = %s; want %s", i, pos, wantPositions[i])
+		}
 	}
 }
