@@ -9,6 +9,13 @@ func Parse(body string, opts ...Option) (*ast.Document, error) {
 	return ParseSource(&ast.Source{Body: body, Name: "GraphQL"}, opts...)
 }
 
+// ParseSchema parses a GraphQL schema document and returns its [ast.Document].
+// The source is wrapped in an ast.Source named "GraphQL" for error messages;
+// use [ParseSchemaSource] to supply your own filename and location offset.
+func ParseSchema(body string, opts ...Option) (*ast.Document, error) {
+	return ParseSchemaSource(&ast.Source{Body: body, Name: "GraphQL"}, opts...)
+}
+
 // ParseSource parses a GraphQL document from src.
 //
 // In the default fail-fast mode the first syntax error aborts and the
@@ -17,25 +24,73 @@ func Parse(body string, opts ...Option) (*ast.Document, error) {
 // non-nil [ParseErrors]; the document may contain Bad{Definition,Field,Value,
 // Type} placeholder nodes where the parser had to resynchronize.
 func ParseSource(src *ast.Source, opts ...Option) (*ast.Document, error) {
+	doc, _, err := parseSource(src, opts)
+	return doc, err
+}
+
+func parseSource(src *ast.Source, opts []Option) (*ast.Document, *parser, error) {
 	p := newParser(src, opts)
 	doc, err := p.parseDocument()
 	if err != nil {
 		if p.cfg.recovery {
 			_ = p.recordError(err)
 		} else {
-			return nil, err
+			return nil, p, err
 		}
 	}
 	if err := p.expectEOF(); err != nil {
 		if !p.cfg.recovery {
-			return nil, err
+			return nil, p, err
 		}
 		_ = p.recordError(err)
 	}
 	if p.cfg.recovery && len(p.errors) > 0 {
-		return doc, ParseErrors(p.errors)
+		return doc, p, ParseErrors(p.errors)
 	}
-	return doc, nil
+	return doc, p, nil
+}
+
+// ParseSchemaSource parses a GraphQL schema document from src.
+func ParseSchemaSource(src *ast.Source, opts ...Option) (*ast.Document, error) {
+	doc, p, err := parseSource(src, opts)
+	if err != nil && !p.cfg.recovery {
+		return nil, err
+	}
+	if doc == nil {
+		return nil, err
+	}
+
+	schemaErrs := schemaOnlyErrors(doc)
+	if len(schemaErrs) == 0 {
+		return doc, err
+	}
+	if !p.cfg.recovery {
+		return nil, schemaErrs[0]
+	}
+	p.errors = append(p.errors, schemaErrs...)
+	return doc, ParseErrors(p.errors)
+}
+
+func schemaOnlyErrors(doc *ast.Document) []*ast.SyntaxError {
+	var errs []*ast.SyntaxError
+	for _, def := range doc.Definitions {
+		switch def.(type) {
+		case *ast.OperationDefinition, *ast.FragmentDefinition:
+			loc := def.GetLoc()
+			var src *ast.Source
+			var offset int
+			if loc != nil {
+				src = loc.Source
+				offset = loc.Start
+			}
+			errs = append(errs, &ast.SyntaxError{
+				Source:  src,
+				Offset:  offset,
+				Message: "Executable definitions are not allowed in schema documents.",
+			})
+		}
+	}
+	return errs
 }
 
 // ParseValue parses a single GraphQL value literal. Variables ($name) are

@@ -8,7 +8,7 @@ documents and the type-system / SDL — in three small packages:
 ```
 github.com/brian-bell/graphql-parser/ast    // node types, Source, Position, Loc, Walk
 github.com/brian-bell/graphql-parser/lexer  // tokenizer
-github.com/brian-bell/graphql-parser/parser // Parse, ParseSource, ParseValue, ParseConstValue, ParseType
+github.com/brian-bell/graphql-parser/parser // Parse, ParseSource, ParseSchema, ParseSchemaSource, ParseValue, ParseConstValue, ParseType
 ```
 
 Validation, execution, and printing are out of scope.
@@ -39,6 +39,25 @@ for _, def := range doc.Definitions {
     // type-switch on def: *ast.OperationDefinition, *ast.FragmentDefinition,
     // *ast.ObjectTypeDefinition, etc.
 }
+```
+
+### Parse SDL only
+
+Use `ParseSchema` when callers expect a schema / SDL document and want to
+reject executable definitions (operations and fragments) after syntax parsing.
+It accepts the same options as `Parse`; use `ParseSchemaSource` to provide a
+custom `*ast.Source` name or `LocationOffset`.
+
+```go
+schemaDoc, err := parser.ParseSchema(`
+    type Query {
+        user(id: ID!): User
+    }
+
+    extend type Query {
+        viewer: User
+    }
+`)
 ```
 
 ### Parse a single value or type literal
