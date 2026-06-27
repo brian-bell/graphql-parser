@@ -13,11 +13,11 @@ load-bearing feature of the project.
 
 ## Rules
 
-1. **No `regexp`** in `lexer/` or `parser/`.
-   The grammar is small enough to hand-write. Regexp's setup cost on a
-   per-parse basis swamps the parsing itself for small inputs.
+1. **No `regexp`** in `lexer/`, `parser/`, or `schemaindex/`.
+   The grammar and SDL index are small enough to hand-write. Regexp's setup
+   cost on a per-parse basis swamps the parsing itself for small inputs.
 
-2. **No `reflect`** in `lexer/`, `parser/`, or `ast/walk.go`.
+2. **No `reflect`** in `lexer/`, `parser/`, `schemaindex/`, or `ast/walk.go`.
    The AST has ~40 concrete node types. Type switches are cheaper, easier
    to read, and produce useful compile-time errors when a node kind is
    missed.
@@ -44,9 +44,9 @@ load-bearing feature of the project.
 
 - `gofmt -l .` is empty.
 - `go vet ./...` is clean.
-- `grep -rn 'regexp\|reflect\|fmt.Sprintf' lexer/ parser/ ast/` returns
-  only allowed sites: `ast/error.go`, `ast/loc.go` (column formatting in
-  `Position.String`), and the comment-permitted error-message path in
+- `grep -rn 'regexp\|reflect\|fmt.Sprintf' lexer/ parser/ ast/ schemaindex/`
+  returns only allowed sites: `ast/error.go`, `ast/loc.go` (column formatting
+  in `Position.String`), and the comment-permitted error-message path in
   `parser/parser.go`'s `describeToken`.
 - Benchmarks in `parser/benchmark_test.go` run cleanly on every PR with
   `go test -bench=. -benchmem ./parser/`.

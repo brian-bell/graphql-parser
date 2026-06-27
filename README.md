@@ -3,12 +3,13 @@
 A small, dependency-free Go library that parses GraphQL source text into an
 AST. Supports both grammars from the
 [October 2021 GraphQL spec](https://spec.graphql.org/October2021/) — executable
-documents and the type-system / SDL — in three small packages:
+documents and the type-system / SDL — in four small packages:
 
 ```
 github.com/brian-bell/graphql-parser/ast    // node types, Source, Position, Loc, Walk, AST helpers
 github.com/brian-bell/graphql-parser/lexer  // tokenizer
 github.com/brian-bell/graphql-parser/parser // Parse, ParseSource, ParseSchema, ParseSchemaSource, ParseValue, ParseConstValue, ParseType
+github.com/brian-bell/graphql-parser/schemaindex // SDL type-definition lookup by name
 ```
 
 Validation, execution, and printing are out of scope.
@@ -59,6 +60,37 @@ schemaDoc, err := parser.ParseSchema(`
     }
 `)
 ```
+
+### Index SDL definitions
+
+Use `schemaindex` to look up parsed SDL type definitions and extensions by
+name while preserving source order.
+
+```go
+import (
+    "fmt"
+
+    "github.com/brian-bell/graphql-parser/ast"
+    "github.com/brian-bell/graphql-parser/parser"
+    "github.com/brian-bell/graphql-parser/schemaindex"
+)
+
+schemaDoc, err := parser.ParseSchema(`
+    type Query { user: User }
+    extend type Query { viewer: User }
+`)
+if err != nil { panic(err) }
+
+idx := schemaindex.New(schemaDoc)
+query := idx.LookupType("Query")
+base := query.BaseDefinitions()[0].(*ast.ObjectTypeDefinition)
+ext := query.Extensions()[0].(*ast.ObjectTypeExtension)
+
+fmt.Println(base.Name, ext.Fields[0].Name)
+```
+
+The index does not validate schema semantics, enforce duplicate-name rules, or
+fold extensions into base definitions.
 
 ### Parse a single value or type literal
 
