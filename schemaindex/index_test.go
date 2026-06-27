@@ -129,8 +129,8 @@ func TestNewRecordsExtensionsSeparatelyInSourceOrder(t *testing.T) {
 	if got := len(extensions); got != 2 {
 		t.Fatalf("Query Extensions() length = %d; want 2", got)
 	}
-	firstExt := extensions[0].(*ast.ObjectTypeExtension)
-	secondExt := extensions[1].(*ast.ObjectTypeExtension)
+	firstExt := requireObjectTypeExtension(t, extensions[0])
+	secondExt := requireObjectTypeExtension(t, extensions[1])
 	if firstExt.Fields[0].Name != "second" {
 		t.Fatalf("first Query extension field = %q; want second", firstExt.Fields[0].Name)
 	}
@@ -222,8 +222,8 @@ func TestNewPreservesDuplicateBaseDefinitionsInSourceOrder(t *testing.T) {
 	if got := len(defs); got != 2 {
 		t.Fatalf("BaseDefinitions() length = %d; want 2", got)
 	}
-	first := defs[0].(*ast.ObjectTypeDefinition)
-	second := defs[1].(*ast.ObjectTypeDefinition)
+	first := requireObjectTypeDefinition(t, defs[0])
+	second := requireObjectTypeDefinition(t, defs[1])
 	if first.Fields[0].Name != "first" {
 		t.Fatalf("first Query base definition field = %q; want first", first.Fields[0].Name)
 	}
@@ -273,7 +273,7 @@ func TestNewDoesNotValidateSchemaSemantics(t *testing.T) {
 
 func TestNewIgnoresNonTypeDefinitions(t *testing.T) {
 	doc, err := parser.Parse(`
-		schema { query: Query }
+		schema { query: Root }
 		extend schema @tag
 		directive @tag on SCHEMA
 		query Get { viewer }
@@ -289,7 +289,7 @@ func TestNewIgnoresNonTypeDefinitions(t *testing.T) {
 	if idx.LookupType("Query") == nil {
 		t.Fatal(`LookupType("Query") = nil`)
 	}
-	for _, name := range []string{"tag", "Get", "Fields"} {
+	for _, name := range []string{"Root", "tag", "Get", "Fields"} {
 		if got := idx.LookupType(name); got != nil {
 			t.Fatalf("LookupType(%q) = %#v; want nil", name, got)
 		}
@@ -314,17 +314,43 @@ func TestEntryDefinitionSlicesAreCopies(t *testing.T) {
 		t.Fatal(`LookupType("Query") = nil`)
 	}
 
+	wantBase := doc.Definitions[0]
+	wantExtension := doc.Definitions[1]
 	baseDefs := entry.BaseDefinitions()
+	if got := baseDefs[0]; got != wantBase {
+		t.Fatalf("BaseDefinitions()[0] = %T; want original parsed node %T", got, wantBase)
+	}
 	baseDefs[0] = nil
 	extensions := entry.Extensions()
+	if got := extensions[0]; got != wantExtension {
+		t.Fatalf("Extensions()[0] = %T; want original parsed node %T", got, wantExtension)
+	}
 	extensions[0] = nil
 
-	if got := entry.BaseDefinitions()[0]; got == nil {
-		t.Fatal("BaseDefinitions()[0] = nil after mutating returned slice")
+	if got := entry.BaseDefinitions()[0]; got != wantBase {
+		t.Fatalf("BaseDefinitions()[0] = %T after mutating returned slice; want original parsed node %T", got, wantBase)
 	}
-	if got := entry.Extensions()[0]; got == nil {
-		t.Fatal("Extensions()[0] = nil after mutating returned slice")
+	if got := entry.Extensions()[0]; got != wantExtension {
+		t.Fatalf("Extensions()[0] = %T after mutating returned slice; want original parsed node %T", got, wantExtension)
 	}
+}
+
+func requireObjectTypeDefinition(t *testing.T, def ast.Definition) *ast.ObjectTypeDefinition {
+	t.Helper()
+	objectDef, ok := def.(*ast.ObjectTypeDefinition)
+	if !ok {
+		t.Fatalf("definition = %T; want *ast.ObjectTypeDefinition", def)
+	}
+	return objectDef
+}
+
+func requireObjectTypeExtension(t *testing.T, def ast.Definition) *ast.ObjectTypeExtension {
+	t.Helper()
+	objectExt, ok := def.(*ast.ObjectTypeExtension)
+	if !ok {
+		t.Fatalf("extension = %T; want *ast.ObjectTypeExtension", def)
+	}
+	return objectExt
 }
 
 func mustParseSchema(t *testing.T, body string) *ast.Document {
