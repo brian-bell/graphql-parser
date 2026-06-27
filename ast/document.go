@@ -43,6 +43,30 @@ func (dl DirectiveList) ForName(name string) *Directive {
 	return nil
 }
 
+// DirectiveStringArg returns the decoded string value for the first matching
+// directive argument. It returns ("", false) when the directive or argument is
+// absent, nil, or not a StringValue. An explicit empty string returns ("",
+// true).
+func DirectiveStringArg(dirs DirectiveList, directiveName, argumentName string) (string, bool) {
+	for _, dir := range dirs {
+		if dir == nil || dir.Name != directiveName {
+			continue
+		}
+		for _, arg := range dir.Arguments {
+			if arg == nil || arg.Name != argumentName {
+				continue
+			}
+			value, ok := arg.Value.(*StringValue)
+			if !ok || value == nil {
+				return "", false
+			}
+			return value.Value, true
+		}
+		return "", false
+	}
+	return "", false
+}
+
 // VariableDefinitionList is a slice of *VariableDefinition.
 type VariableDefinitionList []*VariableDefinition
 
