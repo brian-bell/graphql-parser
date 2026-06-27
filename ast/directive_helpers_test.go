@@ -12,6 +12,7 @@ func TestDirectiveStringArg_ReturnsStringValue(t *testing.T) {
 		enum Color {
 			BLUE @deprecated(reason: "use INDIGO")
 			EMPTY @deprecated(reason: "")
+			ESCAPED @deprecated(reason: "use \u0049NDIGO")
 		}
 	`)
 	if err != nil {
@@ -30,9 +31,17 @@ func TestDirectiveStringArg_ReturnsStringValue(t *testing.T) {
 	if got != "" || !ok {
 		t.Fatalf("DirectiveStringArg(EMPTY) = %q, %v; want empty string, true", got, ok)
 	}
+
+	escaped := enumDef.Values.ForName("ESCAPED")
+	got, ok = ast.DirectiveStringArg(escaped.Directives, "deprecated", "reason")
+	if got != "use INDIGO" || !ok {
+		t.Fatalf("DirectiveStringArg(ESCAPED) = %q, %v; want %q, true", got, ok, "use INDIGO")
+	}
 }
 
 func TestDirectiveStringArg_ReturnsFalseForMissingNilOrNonString(t *testing.T) {
+	var nilString *ast.StringValue
+
 	doc, err := parser.ParseSchema(`
 		enum Color {
 			RED @deprecated
@@ -75,6 +84,44 @@ func TestDirectiveStringArg_ReturnsFalseForMissingNilOrNonString(t *testing.T) {
 					Name: "deprecated",
 					Arguments: ast.ArgumentList{
 						&ast.Argument{Name: "reason"},
+					},
+				},
+			},
+			arg: "reason",
+		},
+		{
+			name: "typed nil string value",
+			dirs: ast.DirectiveList{
+				&ast.Directive{
+					Name: "deprecated",
+					Arguments: ast.ArgumentList{
+						&ast.Argument{Name: "reason", Value: nilString},
+					},
+				},
+			},
+			arg: "reason",
+		},
+		{
+			name: "first matching directive without argument wins",
+			dirs: ast.DirectiveList{
+				&ast.Directive{Name: "deprecated"},
+				&ast.Directive{
+					Name: "deprecated",
+					Arguments: ast.ArgumentList{
+						&ast.Argument{Name: "reason", Value: &ast.StringValue{Value: "later"}},
+					},
+				},
+			},
+			arg: "reason",
+		},
+		{
+			name: "first matching argument non-string wins",
+			dirs: ast.DirectiveList{
+				&ast.Directive{
+					Name: "deprecated",
+					Arguments: ast.ArgumentList{
+						&ast.Argument{Name: "reason", Value: &ast.IntValue{Value: "123"}},
+						&ast.Argument{Name: "reason", Value: &ast.StringValue{Value: "later"}},
 					},
 				},
 			},

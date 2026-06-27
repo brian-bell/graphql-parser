@@ -50,11 +50,18 @@ func TestNamedTypeName_UnwrapsWrappedTypes(t *testing.T) {
 }
 
 func TestTypeHelpers_ReturnEmptyForInvalidTypes(t *testing.T) {
+	var nilNamed *ast.NamedType
+	var nilList *ast.ListType
+	var nilNonNull *ast.NonNullType
+
 	cases := []struct {
 		name string
 		typ  ast.Type
 	}{
 		{name: "nil"},
+		{name: "typed nil named", typ: nilNamed},
+		{name: "typed nil list", typ: nilList},
+		{name: "typed nil non-null", typ: nilNonNull},
 		{name: "bad type", typ: &ast.BadType{}},
 		{name: "list with nil inner", typ: &ast.ListType{}},
 		{name: "non-null with nil inner", typ: &ast.NonNullType{}},
