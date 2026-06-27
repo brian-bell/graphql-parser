@@ -102,19 +102,6 @@ func TestDirectiveStringArg_ReturnsFalseForMissingNilOrNonString(t *testing.T) {
 			arg: "reason",
 		},
 		{
-			name: "first matching directive without argument wins",
-			dirs: ast.DirectiveList{
-				&ast.Directive{Name: "deprecated"},
-				&ast.Directive{
-					Name: "deprecated",
-					Arguments: ast.ArgumentList{
-						&ast.Argument{Name: "reason", Value: &ast.StringValue{Value: "later"}},
-					},
-				},
-			},
-			arg: "reason",
-		},
-		{
 			name: "first matching argument non-string wins",
 			dirs: ast.DirectiveList{
 				&ast.Directive{
@@ -135,5 +122,23 @@ func TestDirectiveStringArg_ReturnsFalseForMissingNilOrNonString(t *testing.T) {
 				t.Fatalf("DirectiveStringArg() = %q, %v; want empty string, false", got, ok)
 			}
 		})
+	}
+}
+
+func TestDirectiveStringArg_ScansRepeatableDirectives(t *testing.T) {
+	dirs := ast.DirectiveList{
+		&ast.Directive{Name: "tag"},
+		&ast.Directive{Name: "other"},
+		&ast.Directive{
+			Name: "tag",
+			Arguments: ast.ArgumentList{
+				&ast.Argument{Name: "name", Value: &ast.StringValue{Value: "later"}},
+			},
+		},
+	}
+
+	got, ok := ast.DirectiveStringArg(dirs, "tag", "name")
+	if got != "later" || !ok {
+		t.Fatalf("DirectiveStringArg() = %q, %v; want %q, true", got, ok, "later")
 	}
 }

@@ -44,9 +44,9 @@ func (dl DirectiveList) ForName(name string) *Directive {
 }
 
 // DirectiveStringArg returns the decoded string value for the first matching
-// directive argument. It returns ("", false) when the directive or argument is
-// absent, nil, or not a StringValue. An explicit empty string returns ("",
-// true).
+// directive argument, scanning repeated directives with the same name. It
+// returns ("", false) when the directive or argument is absent, nil, or not a
+// StringValue. An explicit empty string returns ("", true).
 func DirectiveStringArg(dirs DirectiveList, directiveName, argumentName string) (string, bool) {
 	for _, dir := range dirs {
 		if dir == nil || dir.Name != directiveName {
@@ -62,7 +62,6 @@ func DirectiveStringArg(dirs DirectiveList, directiveName, argumentName string) 
 			}
 			return value.Value, true
 		}
-		return "", false
 	}
 	return "", false
 }
