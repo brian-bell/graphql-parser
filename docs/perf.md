@@ -45,8 +45,8 @@ load-bearing feature of the project.
 - `gofmt -l .` is empty.
 - `go vet ./...` is clean.
 - `grep -rn 'regexp\|reflect\|fmt.Sprintf' lexer/ parser/ ast/ schemaindex/`
-  returns only allowed sites: `ast/error.go`, `ast/loc.go` (column formatting
-  in `Position.String`), and the comment-permitted error-message path in
+  returns only allowed sites: test files, `ast/error.go`, `ast/loc.go` (column
+  formatting in `Position.String`), lexer/parser error-message paths, and
   `parser/parser.go`'s `describeToken`.
 - Benchmarks in `parser/benchmark_test.go` run cleanly on every PR with
   `go test -bench=. -benchmem ./parser/`.
