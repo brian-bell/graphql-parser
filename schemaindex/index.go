@@ -1,8 +1,10 @@
 // Package schemaindex indexes parsed GraphQL SDL type definitions.
 //
 // The index records top-level named type definitions and matching extensions.
-// It does not validate schema semantics, merge duplicate definitions, or fold
-// extensions into their base definitions.
+// Raw base definitions and extensions stay separate, while object, interface,
+// and input helper accessors expose base members followed by extension members.
+// It does not validate schema semantics, merge duplicate definitions, or
+// deduplicate folded members.
 package schemaindex
 
 import "github.com/brian-bell/graphql-parser/ast"
@@ -108,6 +110,91 @@ func (e *TypeEntry) BaseDefinitions() []ast.Definition {
 // entry. The AST nodes inside the returned slice are the original parsed nodes.
 func (e *TypeEntry) Extensions() []ast.Definition {
 	return copyDefinitions(e.extensions)
+}
+
+// ObjectFields returns object fields from base definitions followed by matching
+// object extensions, each in source order.
+func (e *TypeEntry) ObjectFields() ast.FieldDefinitionList {
+	var fields ast.FieldDefinitionList
+	for _, def := range e.baseDefinitions {
+		if objectDef, ok := def.(*ast.ObjectTypeDefinition); ok {
+			fields = append(fields, objectDef.Fields...)
+		}
+	}
+	for _, def := range e.extensions {
+		if objectExt, ok := def.(*ast.ObjectTypeExtension); ok {
+			fields = append(fields, objectExt.Fields...)
+		}
+	}
+	return fields
+}
+
+// ObjectInterfaces returns object implemented interfaces from base definitions
+// followed by matching object extensions, each in source order.
+func (e *TypeEntry) ObjectInterfaces() []*ast.NamedType {
+	var interfaces []*ast.NamedType
+	for _, def := range e.baseDefinitions {
+		if objectDef, ok := def.(*ast.ObjectTypeDefinition); ok {
+			interfaces = append(interfaces, objectDef.Interfaces...)
+		}
+	}
+	for _, def := range e.extensions {
+		if objectExt, ok := def.(*ast.ObjectTypeExtension); ok {
+			interfaces = append(interfaces, objectExt.Interfaces...)
+		}
+	}
+	return interfaces
+}
+
+// InterfaceInterfaces returns interface implemented interfaces from base
+// definitions followed by matching interface extensions, each in source order.
+func (e *TypeEntry) InterfaceInterfaces() []*ast.NamedType {
+	var interfaces []*ast.NamedType
+	for _, def := range e.baseDefinitions {
+		if interfaceDef, ok := def.(*ast.InterfaceTypeDefinition); ok {
+			interfaces = append(interfaces, interfaceDef.Interfaces...)
+		}
+	}
+	for _, def := range e.extensions {
+		if interfaceExt, ok := def.(*ast.InterfaceTypeExtension); ok {
+			interfaces = append(interfaces, interfaceExt.Interfaces...)
+		}
+	}
+	return interfaces
+}
+
+// InterfaceFields returns interface fields from base definitions followed by
+// matching interface extensions, each in source order.
+func (e *TypeEntry) InterfaceFields() ast.FieldDefinitionList {
+	var fields ast.FieldDefinitionList
+	for _, def := range e.baseDefinitions {
+		if interfaceDef, ok := def.(*ast.InterfaceTypeDefinition); ok {
+			fields = append(fields, interfaceDef.Fields...)
+		}
+	}
+	for _, def := range e.extensions {
+		if interfaceExt, ok := def.(*ast.InterfaceTypeExtension); ok {
+			fields = append(fields, interfaceExt.Fields...)
+		}
+	}
+	return fields
+}
+
+// InputFields returns input object fields from base definitions followed by
+// matching input object extensions, each in source order.
+func (e *TypeEntry) InputFields() ast.InputValueList {
+	var fields ast.InputValueList
+	for _, def := range e.baseDefinitions {
+		if inputDef, ok := def.(*ast.InputObjectTypeDefinition); ok {
+			fields = append(fields, inputDef.Fields...)
+		}
+	}
+	for _, def := range e.extensions {
+		if inputExt, ok := def.(*ast.InputObjectTypeExtension); ok {
+			fields = append(fields, inputExt.Fields...)
+		}
+	}
+	return fields
 }
 
 func copyDefinitions(defs []ast.Definition) []ast.Definition {

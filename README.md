@@ -85,12 +85,15 @@ idx := schemaindex.New(schemaDoc)
 query := idx.LookupType("Query")
 base := query.BaseDefinitions()[0].(*ast.ObjectTypeDefinition)
 ext := query.Extensions()[0].(*ast.ObjectTypeExtension)
+fields := query.ObjectFields()
 
-fmt.Println(base.Name, ext.Fields[0].Name)
+fmt.Println(base.Name, ext.Fields[0].Name, fields[1].Name)
 ```
 
 The index does not validate schema semantics, enforce duplicate-name rules, or
-fold extensions into base definitions.
+deduplicate folded members. `BaseDefinitions()` and `Extensions()` preserve raw
+parsed metadata separately; object, interface, and input helper accessors return
+base members followed by matching extension members.
 
 ### Parse a single value or type literal
 

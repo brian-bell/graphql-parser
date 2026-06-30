@@ -207,6 +207,183 @@ func TestNewRecordsExtensionsSeparatelyInSourceOrder(t *testing.T) {
 	}
 }
 
+func TestTypeEntryObjectFieldsFoldBaseAndExtensions(t *testing.T) {
+	doc := mustParseSchema(t, `
+		type Query { base: String }
+		extend type Query { firstExtension: String }
+		extend type Product { id: ID }
+		extend type Query { secondExtension: String }
+	`)
+
+	idx := schemaindex.New(doc)
+	query := idx.LookupType("Query")
+	if query == nil {
+		t.Fatal(`LookupType("Query") = nil`)
+	}
+	assertFieldNames(t, query.ObjectFields(), "base", "firstExtension", "secondExtension")
+
+	product := idx.LookupType("Product")
+	if product == nil {
+		t.Fatal(`LookupType("Product") = nil`)
+	}
+	assertFieldNames(t, product.ObjectFields(), "id")
+}
+
+func TestTypeEntryInterfacesFoldBaseAndExtensions(t *testing.T) {
+	doc := mustParseSchema(t, `
+		type User implements Node { id: ID }
+		extend type User implements Resource { resource: String }
+		interface Resource implements Node { id: ID }
+		extend interface Resource implements Named { name: String }
+		extend type Product implements Node { id: ID }
+		extend interface Entity implements Node { id: ID }
+	`)
+
+	idx := schemaindex.New(doc)
+	user := idx.LookupType("User")
+	if user == nil {
+		t.Fatal(`LookupType("User") = nil`)
+	}
+	assertNamedTypeNames(t, user.ObjectInterfaces(), "Node", "Resource")
+
+	product := idx.LookupType("Product")
+	if product == nil {
+		t.Fatal(`LookupType("Product") = nil`)
+	}
+	assertNamedTypeNames(t, product.ObjectInterfaces(), "Node")
+
+	resource := idx.LookupType("Resource")
+	if resource == nil {
+		t.Fatal(`LookupType("Resource") = nil`)
+	}
+	assertNamedTypeNames(t, resource.InterfaceInterfaces(), "Node", "Named")
+
+	entity := idx.LookupType("Entity")
+	if entity == nil {
+		t.Fatal(`LookupType("Entity") = nil`)
+	}
+	assertNamedTypeNames(t, entity.InterfaceInterfaces(), "Node")
+}
+
+func TestTypeEntryInterfaceFieldsFoldBaseAndExtensions(t *testing.T) {
+	doc := mustParseSchema(t, `
+		interface Node { id: ID! }
+		extend interface Node { createdAt: String }
+		extend interface Entity { id: ID! }
+		extend interface Node { updatedAt: String }
+	`)
+
+	idx := schemaindex.New(doc)
+	node := idx.LookupType("Node")
+	if node == nil {
+		t.Fatal(`LookupType("Node") = nil`)
+	}
+	assertFieldNames(t, node.InterfaceFields(), "id", "createdAt", "updatedAt")
+
+	entity := idx.LookupType("Entity")
+	if entity == nil {
+		t.Fatal(`LookupType("Entity") = nil`)
+	}
+	assertFieldNames(t, entity.InterfaceFields(), "id")
+}
+
+func TestTypeEntryInputFieldsFoldBaseAndExtensions(t *testing.T) {
+	doc := mustParseSchema(t, `
+		input UserInput { id: ID }
+		extend input UserInput { name: String }
+		extend input ProductInput { sku: String }
+		extend input UserInput { email: String }
+	`)
+
+	idx := schemaindex.New(doc)
+	userInput := idx.LookupType("UserInput")
+	if userInput == nil {
+		t.Fatal(`LookupType("UserInput") = nil`)
+	}
+	assertInputValueNames(t, userInput.InputFields(), "id", "name", "email")
+
+	productInput := idx.LookupType("ProductInput")
+	if productInput == nil {
+		t.Fatal(`LookupType("ProductInput") = nil`)
+	}
+	assertInputValueNames(t, productInput.InputFields(), "sku")
+}
+
+func TestTypeEntryDirectiveOnlyExtensionsPreserveMetadataWithoutMembers(t *testing.T) {
+	doc := mustParseSchema(t, `
+		directive @tag on OBJECT | INTERFACE | INPUT_OBJECT
+
+		type Query { base: String }
+		extend type Query @tag
+		extend type Product @tag
+
+		interface Node { id: ID! }
+		extend interface Node @tag
+		extend interface Entity @tag
+
+		input UserInput { id: ID }
+		extend input UserInput @tag
+		extend input ProductInput @tag
+	`)
+
+	idx := schemaindex.New(doc)
+	query := idx.LookupType("Query")
+	if query == nil {
+		t.Fatal(`LookupType("Query") = nil`)
+	}
+	assertFieldNames(t, query.ObjectFields(), "base")
+	if got := len(query.Extensions()); got != 1 {
+		t.Fatalf("Query Extensions() length = %d; want 1", got)
+	}
+
+	product := idx.LookupType("Product")
+	if product == nil {
+		t.Fatal(`LookupType("Product") = nil`)
+	}
+	assertFieldNames(t, product.ObjectFields())
+	if got := len(product.Extensions()); got != 1 {
+		t.Fatalf("Product Extensions() length = %d; want 1", got)
+	}
+
+	node := idx.LookupType("Node")
+	if node == nil {
+		t.Fatal(`LookupType("Node") = nil`)
+	}
+	assertFieldNames(t, node.InterfaceFields(), "id")
+	assertNamedTypeNames(t, node.InterfaceInterfaces())
+	if got := len(node.Extensions()); got != 1 {
+		t.Fatalf("Node Extensions() length = %d; want 1", got)
+	}
+
+	entity := idx.LookupType("Entity")
+	if entity == nil {
+		t.Fatal(`LookupType("Entity") = nil`)
+	}
+	assertFieldNames(t, entity.InterfaceFields())
+	assertNamedTypeNames(t, entity.InterfaceInterfaces())
+	if got := len(entity.Extensions()); got != 1 {
+		t.Fatalf("Entity Extensions() length = %d; want 1", got)
+	}
+
+	userInput := idx.LookupType("UserInput")
+	if userInput == nil {
+		t.Fatal(`LookupType("UserInput") = nil`)
+	}
+	assertInputValueNames(t, userInput.InputFields(), "id")
+	if got := len(userInput.Extensions()); got != 1 {
+		t.Fatalf("UserInput Extensions() length = %d; want 1", got)
+	}
+
+	productInput := idx.LookupType("ProductInput")
+	if productInput == nil {
+		t.Fatal(`LookupType("ProductInput") = nil`)
+	}
+	assertInputValueNames(t, productInput.InputFields())
+	if got := len(productInput.Extensions()); got != 1 {
+		t.Fatalf("ProductInput Extensions() length = %d; want 1", got)
+	}
+}
+
 func TestNewPreservesDuplicateBaseDefinitionsInSourceOrder(t *testing.T) {
 	doc := mustParseSchema(t, `
 		type Query { first: String }
@@ -335,6 +512,58 @@ func TestEntryDefinitionSlicesAreCopies(t *testing.T) {
 	}
 }
 
+func TestTypeEntryFoldedMemberSlicesAreCopies(t *testing.T) {
+	doc := mustParseSchema(t, `
+		type User implements Node { id: ID }
+		extend type User implements Resource { name: String }
+		input UserInput { id: ID }
+		extend input UserInput { name: String }
+	`)
+
+	idx := schemaindex.New(doc)
+	user := idx.LookupType("User")
+	if user == nil {
+		t.Fatal(`LookupType("User") = nil`)
+	}
+	fields := user.ObjectFields()
+	fields[0] = nil
+	assertFieldNames(t, user.ObjectFields(), "id", "name")
+
+	interfaces := user.ObjectInterfaces()
+	interfaces[0] = nil
+	assertNamedTypeNames(t, user.ObjectInterfaces(), "Node", "Resource")
+
+	userInput := idx.LookupType("UserInput")
+	if userInput == nil {
+		t.Fatal(`LookupType("UserInput") = nil`)
+	}
+	inputFields := userInput.InputFields()
+	inputFields[0] = nil
+	assertInputValueNames(t, userInput.InputFields(), "id", "name")
+}
+
+func TestTypeEntryFoldedAccessorsIgnoreMixedKindEntries(t *testing.T) {
+	doc := mustParseSchema(t, `
+		type Shared { objectBase: String }
+		interface Shared { interfaceBase: String }
+		input Shared { inputBase: String }
+		extend type Shared implements Node { objectExtension: String }
+		extend interface Shared implements Resource { interfaceExtension: String }
+		extend input Shared { inputExtension: String }
+	`)
+
+	entry := schemaindex.New(doc).LookupType("Shared")
+	if entry == nil {
+		t.Fatal(`LookupType("Shared") = nil`)
+	}
+
+	assertFieldNames(t, entry.ObjectFields(), "objectBase", "objectExtension")
+	assertNamedTypeNames(t, entry.ObjectInterfaces(), "Node")
+	assertFieldNames(t, entry.InterfaceFields(), "interfaceBase", "interfaceExtension")
+	assertNamedTypeNames(t, entry.InterfaceInterfaces(), "Resource")
+	assertInputValueNames(t, entry.InputFields(), "inputBase", "inputExtension")
+}
+
 func requireObjectTypeDefinition(t *testing.T, def ast.Definition) *ast.ObjectTypeDefinition {
 	t.Helper()
 	objectDef, ok := def.(*ast.ObjectTypeDefinition)
@@ -351,6 +580,42 @@ func requireObjectTypeExtension(t *testing.T, def ast.Definition) *ast.ObjectTyp
 		t.Fatalf("extension = %T; want *ast.ObjectTypeExtension", def)
 	}
 	return objectExt
+}
+
+func assertFieldNames(t *testing.T, fields ast.FieldDefinitionList, names ...string) {
+	t.Helper()
+	if got := len(fields); got != len(names) {
+		t.Fatalf("field count = %d; want %d", got, len(names))
+	}
+	for i, name := range names {
+		if fields[i].Name != name {
+			t.Fatalf("field[%d].Name = %q; want %q", i, fields[i].Name, name)
+		}
+	}
+}
+
+func assertNamedTypeNames(t *testing.T, types []*ast.NamedType, names ...string) {
+	t.Helper()
+	if got := len(types); got != len(names) {
+		t.Fatalf("named type count = %d; want %d", got, len(names))
+	}
+	for i, name := range names {
+		if types[i].Name != name {
+			t.Fatalf("namedType[%d].Name = %q; want %q", i, types[i].Name, name)
+		}
+	}
+}
+
+func assertInputValueNames(t *testing.T, values ast.InputValueList, names ...string) {
+	t.Helper()
+	if got := len(values); got != len(names) {
+		t.Fatalf("input value count = %d; want %d", got, len(names))
+	}
+	for i, name := range names {
+		if values[i].Name != name {
+			t.Fatalf("inputValue[%d].Name = %q; want %q", i, values[i].Name, name)
+		}
+	}
 }
 
 func mustParseSchema(t *testing.T, body string) *ast.Document {
