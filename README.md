@@ -78,22 +78,25 @@ import (
 schemaDoc, err := parser.ParseSchema(`
     type Query { user: User }
     extend type Query { viewer: User }
+    extend enum Status { ARCHIVED }
 `)
 if err != nil { panic(err) }
 
 idx := schemaindex.New(schemaDoc)
+names := idx.TypeNames()
 query := idx.LookupType("Query")
 base := query.BaseDefinitions()[0].(*ast.ObjectTypeDefinition)
 ext := query.Extensions()[0].(*ast.ObjectTypeExtension)
 fields := query.ObjectFields()
 
-fmt.Println(base.Name, ext.Fields[0].Name, fields[1].Name)
+fmt.Println(names[0], base.Name, ext.Fields[0].Name, fields[1].Name)
 ```
 
 The index does not validate schema semantics, enforce duplicate-name rules, or
 deduplicate folded members. `BaseDefinitions()` and `Extensions()` preserve raw
-parsed metadata separately; object, interface, and input helper accessors return
-base members followed by matching extension members.
+parsed metadata separately; `TypeNames()` returns indexed type names in
+first-seen document order; and object, interface, input, enum, union, and scalar
+helper accessors return base metadata followed by matching extension metadata.
 
 ### Parse a single value or type literal
 

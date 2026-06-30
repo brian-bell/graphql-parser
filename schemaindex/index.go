@@ -1,10 +1,10 @@
 // Package schemaindex indexes parsed GraphQL SDL type definitions.
 //
 // The index records top-level named type definitions and matching extensions.
-// Raw base definitions and extensions stay separate, while object, interface,
-// and input helper accessors expose base members followed by extension members.
-// It does not validate schema semantics, merge duplicate definitions, or
-// deduplicate folded members.
+// Raw base definitions and extensions stay separate, while helper accessors
+// expose base object, interface, input, enum, union, and scalar metadata
+// followed by matching extension metadata. It does not validate schema
+// semantics, merge duplicate definitions, or deduplicate folded members.
 package schemaindex
 
 import "github.com/brian-bell/graphql-parser/ast"
@@ -12,6 +12,7 @@ import "github.com/brian-bell/graphql-parser/ast"
 // Index provides name-based lookup for parsed SDL type definitions.
 type Index struct {
 	types map[string]*TypeEntry
+	names []string
 }
 
 // New builds an index from doc. A nil document returns an empty index.
@@ -40,6 +41,7 @@ func (idx *Index) entryFor(name string) *TypeEntry {
 	if entry == nil {
 		entry = &TypeEntry{name: name}
 		idx.types[name] = entry
+		idx.names = append(idx.names, name)
 	}
 	return entry
 }
@@ -85,6 +87,11 @@ func extensionTypeName(def ast.Definition) (string, bool) {
 // LookupType returns the indexed type entry for name, or nil when absent.
 func (idx *Index) LookupType(name string) *TypeEntry {
 	return idx.types[name]
+}
+
+// TypeNames returns indexed type names in first-seen document order.
+func (idx *Index) TypeNames() []string {
+	return append([]string(nil), idx.names...)
 }
 
 // TypeEntry contains the parsed base definitions and extensions for one type name.
@@ -195,6 +202,57 @@ func (e *TypeEntry) InputFields() ast.InputValueList {
 		}
 	}
 	return fields
+}
+
+// EnumValues returns enum values from base definitions followed by matching
+// enum extensions, each in source order.
+func (e *TypeEntry) EnumValues() ast.EnumValueList {
+	var values ast.EnumValueList
+	for _, def := range e.baseDefinitions {
+		if enumDef, ok := def.(*ast.EnumTypeDefinition); ok {
+			values = append(values, enumDef.Values...)
+		}
+	}
+	for _, def := range e.extensions {
+		if enumExt, ok := def.(*ast.EnumTypeExtension); ok {
+			values = append(values, enumExt.Values...)
+		}
+	}
+	return values
+}
+
+// UnionMembers returns union members from base definitions followed by matching
+// union extensions, each in source order.
+func (e *TypeEntry) UnionMembers() []*ast.NamedType {
+	var members []*ast.NamedType
+	for _, def := range e.baseDefinitions {
+		if unionDef, ok := def.(*ast.UnionTypeDefinition); ok {
+			members = append(members, unionDef.Members...)
+		}
+	}
+	for _, def := range e.extensions {
+		if unionExt, ok := def.(*ast.UnionTypeExtension); ok {
+			members = append(members, unionExt.Members...)
+		}
+	}
+	return members
+}
+
+// ScalarDirectives returns scalar directives from base definitions followed by
+// matching scalar extensions, each in source order.
+func (e *TypeEntry) ScalarDirectives() ast.DirectiveList {
+	var directives ast.DirectiveList
+	for _, def := range e.baseDefinitions {
+		if scalarDef, ok := def.(*ast.ScalarTypeDefinition); ok {
+			directives = append(directives, scalarDef.Directives...)
+		}
+	}
+	for _, def := range e.extensions {
+		if scalarExt, ok := def.(*ast.ScalarTypeExtension); ok {
+			directives = append(directives, scalarExt.Directives...)
+		}
+	}
+	return directives
 }
 
 func copyDefinitions(defs []ast.Definition) []ast.Definition {

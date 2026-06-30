@@ -309,6 +309,88 @@ func TestTypeEntryInputFieldsFoldBaseAndExtensions(t *testing.T) {
 	assertInputValueNames(t, productInput.InputFields(), "sku")
 }
 
+func TestTypeEntryEnumValuesFoldBaseAndExtensions(t *testing.T) {
+	doc := mustParseSchema(t, `
+		extend enum Status { PENDING }
+		enum Status { ACTIVE }
+		extend enum ExtensionOnly { FIRST }
+		extend enum Status { ARCHIVED ACTIVE }
+		extend enum ExtensionOnly { SECOND }
+	`)
+
+	idx := schemaindex.New(doc)
+	status := idx.LookupType("Status")
+	if status == nil {
+		t.Fatal(`LookupType("Status") = nil`)
+	}
+	assertEnumValueNames(t, status.EnumValues(), "ACTIVE", "PENDING", "ARCHIVED", "ACTIVE")
+
+	extensionOnly := idx.LookupType("ExtensionOnly")
+	if extensionOnly == nil {
+		t.Fatal(`LookupType("ExtensionOnly") = nil`)
+	}
+	assertTypeNames(t, idx.TypeNames(), "Status", "ExtensionOnly")
+	assertEnumValueNames(t, extensionOnly.EnumValues(), "FIRST", "SECOND")
+}
+
+func TestTypeEntryUnionMembersFoldBaseAndExtensions(t *testing.T) {
+	doc := mustParseSchema(t, `
+		extend union Search = Review
+		union Search = User
+		extend union SearchOnly = Product
+		extend union Search = Product | Missing | User
+		extend union SearchOnly = Missing
+	`)
+
+	idx := schemaindex.New(doc)
+	search := idx.LookupType("Search")
+	if search == nil {
+		t.Fatal(`LookupType("Search") = nil`)
+	}
+	assertNamedTypeNames(t, search.UnionMembers(), "User", "Review", "Product", "Missing", "User")
+
+	searchOnly := idx.LookupType("SearchOnly")
+	if searchOnly == nil {
+		t.Fatal(`LookupType("SearchOnly") = nil`)
+	}
+	assertTypeNames(t, idx.TypeNames(), "Search", "SearchOnly")
+	assertNamedTypeNames(t, searchOnly.UnionMembers(), "Product", "Missing")
+}
+
+func TestTypeEntryScalarDirectivesFoldBaseAndExtensions(t *testing.T) {
+	doc := mustParseSchema(t, `
+		directive @tag(name: String) on SCALAR
+		directive @specifiedBy(url: String!) on SCALAR
+
+		scalar URL @specifiedBy(url: "https://example.com/url")
+		extend scalar URL @tag(name: "first")
+		scalar DateTime
+		extend scalar DateTime @specifiedBy(url: "https://example.com/date-time")
+		extend scalar URL @tag(name: "second") @tag(name: "second-duplicate")
+		extend scalar ExtensionOnly @tag(name: "only")
+	`)
+
+	idx := schemaindex.New(doc)
+	url := idx.LookupType("URL")
+	if url == nil {
+		t.Fatal(`LookupType("URL") = nil`)
+	}
+	assertDirectiveNames(t, url.ScalarDirectives(), "specifiedBy", "tag", "tag", "tag")
+
+	dateTime := idx.LookupType("DateTime")
+	if dateTime == nil {
+		t.Fatal(`LookupType("DateTime") = nil`)
+	}
+	assertDirectiveNames(t, dateTime.ScalarDirectives(), "specifiedBy")
+
+	extensionOnly := idx.LookupType("ExtensionOnly")
+	if extensionOnly == nil {
+		t.Fatal(`LookupType("ExtensionOnly") = nil`)
+	}
+	assertTypeNames(t, idx.TypeNames(), "URL", "DateTime", "ExtensionOnly")
+	assertDirectiveNames(t, extensionOnly.ScalarDirectives(), "tag")
+}
+
 func TestTypeEntryDirectiveOnlyExtensionsPreserveMetadataWithoutMembers(t *testing.T) {
 	doc := mustParseSchema(t, `
 		directive @tag on OBJECT | INTERFACE | INPUT_OBJECT
@@ -466,6 +548,7 @@ func TestNewIgnoresNonTypeDefinitions(t *testing.T) {
 	if idx.LookupType("Query") == nil {
 		t.Fatal(`LookupType("Query") = nil`)
 	}
+	assertTypeNames(t, idx.TypeNames(), "Query")
 	for _, name := range []string{"Root", "tag", "Get", "Fields"} {
 		if got := idx.LookupType(name); got != nil {
 			t.Fatalf("LookupType(%q) = %#v; want nil", name, got)
@@ -473,11 +556,37 @@ func TestNewIgnoresNonTypeDefinitions(t *testing.T) {
 	}
 }
 
+func TestIndexTypeNamesAreFirstSeenCopies(t *testing.T) {
+	doc, err := parser.Parse(`
+		schema { query: Root }
+		directive @tag on SCALAR
+		query Get { viewer }
+		fragment Fields on Query { viewer }
+		extend enum Status { PENDING }
+		enum Status { ACTIVE }
+		type Query { viewer: String }
+		extend type Query { other: String }
+		scalar URL
+		extend scalar URL @tag
+	`)
+	if err != nil {
+		t.Fatalf("Parse returned error: %v", err)
+	}
+
+	idx := schemaindex.New(doc)
+	names := idx.TypeNames()
+	assertTypeNames(t, names, "Status", "Query", "URL")
+
+	names[0] = "Mutated"
+	assertTypeNames(t, idx.TypeNames(), "Status", "Query", "URL")
+}
+
 func TestNewNilDocumentIsEmpty(t *testing.T) {
 	idx := schemaindex.New(nil)
 	if got := idx.LookupType("Query"); got != nil {
 		t.Fatalf("LookupType(%q) = %#v; want nil", "Query", got)
 	}
+	assertTypeNames(t, idx.TypeNames())
 }
 
 func TestEntryDefinitionSlicesAreCopies(t *testing.T) {
@@ -520,6 +629,12 @@ func TestTypeEntryFoldedMemberSlicesAreCopies(t *testing.T) {
 		extend interface Entity implements Resource { name: String }
 		input UserInput { id: ID }
 		extend input UserInput { name: String }
+		enum Status { ACTIVE }
+		extend enum Status { ARCHIVED }
+		union Search = User
+		extend union Search = Product
+		scalar URL @specifiedBy(url: "https://example.com/url")
+		extend scalar URL @tag
 	`)
 
 	idx := schemaindex.New(doc)
@@ -554,15 +669,45 @@ func TestTypeEntryFoldedMemberSlicesAreCopies(t *testing.T) {
 	inputFields := userInput.InputFields()
 	inputFields[0] = nil
 	assertInputValueNames(t, userInput.InputFields(), "id", "name")
+
+	status := idx.LookupType("Status")
+	if status == nil {
+		t.Fatal(`LookupType("Status") = nil`)
+	}
+	enumValues := status.EnumValues()
+	enumValues[0] = nil
+	assertEnumValueNames(t, status.EnumValues(), "ACTIVE", "ARCHIVED")
+
+	search := idx.LookupType("Search")
+	if search == nil {
+		t.Fatal(`LookupType("Search") = nil`)
+	}
+	unionMembers := search.UnionMembers()
+	unionMembers[0] = nil
+	assertNamedTypeNames(t, search.UnionMembers(), "User", "Product")
+
+	url := idx.LookupType("URL")
+	if url == nil {
+		t.Fatal(`LookupType("URL") = nil`)
+	}
+	scalarDirectives := url.ScalarDirectives()
+	scalarDirectives[0] = nil
+	assertDirectiveNames(t, url.ScalarDirectives(), "specifiedBy", "tag")
 }
 
 func TestTypeEntryFoldedAccessorsIgnoreMixedKindEntries(t *testing.T) {
 	doc := mustParseSchema(t, `
+		scalar Shared @scalarBase
 		type Shared { objectBase: String }
 		interface Shared { interfaceBase: String }
+		union Shared = BaseMember
+		enum Shared { ENUM_BASE }
 		input Shared { inputBase: String }
+		extend scalar Shared @scalarExtension
 		extend type Shared implements Node { objectExtension: String }
 		extend interface Shared implements Resource { interfaceExtension: String }
+		extend union Shared = ExtensionMember
+		extend enum Shared { ENUM_EXTENSION }
 		extend input Shared { inputExtension: String }
 	`)
 
@@ -576,6 +721,9 @@ func TestTypeEntryFoldedAccessorsIgnoreMixedKindEntries(t *testing.T) {
 	assertFieldNames(t, entry.InterfaceFields(), "interfaceBase", "interfaceExtension")
 	assertNamedTypeNames(t, entry.InterfaceInterfaces(), "Resource")
 	assertInputValueNames(t, entry.InputFields(), "inputBase", "inputExtension")
+	assertEnumValueNames(t, entry.EnumValues(), "ENUM_BASE", "ENUM_EXTENSION")
+	assertNamedTypeNames(t, entry.UnionMembers(), "BaseMember", "ExtensionMember")
+	assertDirectiveNames(t, entry.ScalarDirectives(), "scalarBase", "scalarExtension")
 }
 
 func requireObjectTypeDefinition(t *testing.T, def ast.Definition) *ast.ObjectTypeDefinition {
@@ -628,6 +776,42 @@ func assertInputValueNames(t *testing.T, values ast.InputValueList, names ...str
 	for i, name := range names {
 		if values[i].Name != name {
 			t.Fatalf("inputValue[%d].Name = %q; want %q", i, values[i].Name, name)
+		}
+	}
+}
+
+func assertEnumValueNames(t *testing.T, values ast.EnumValueList, names ...string) {
+	t.Helper()
+	if got := len(values); got != len(names) {
+		t.Fatalf("enum value count = %d; want %d", got, len(names))
+	}
+	for i, name := range names {
+		if values[i].Name != name {
+			t.Fatalf("enumValue[%d].Name = %q; want %q", i, values[i].Name, name)
+		}
+	}
+}
+
+func assertDirectiveNames(t *testing.T, directives ast.DirectiveList, names ...string) {
+	t.Helper()
+	if got := len(directives); got != len(names) {
+		t.Fatalf("directive count = %d; want %d", got, len(names))
+	}
+	for i, name := range names {
+		if directives[i].Name != name {
+			t.Fatalf("directive[%d].Name = %q; want %q", i, directives[i].Name, name)
+		}
+	}
+}
+
+func assertTypeNames(t *testing.T, names []string, want ...string) {
+	t.Helper()
+	if got := len(names); got != len(want) {
+		t.Fatalf("type name count = %d; want %d", got, len(want))
+	}
+	for i, name := range want {
+		if names[i] != name {
+			t.Fatalf("typeNames[%d] = %q; want %q", i, names[i], name)
 		}
 	}
 }
