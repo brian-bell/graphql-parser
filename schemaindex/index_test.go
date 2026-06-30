@@ -602,6 +602,36 @@ func TestIndexLookupMutationAndSubscriptionRootsUseExplicitSchemaDefinitionRoots
 	}
 }
 
+func TestIndexLookupMutationRootFallsBackToMutationWithoutExplicitRoot(t *testing.T) {
+	idx := schemaindex.New(mustParseSchema(t, `
+		type Query { default: String }
+		type Mutation { change: String }
+	`))
+
+	root := idx.LookupMutationRoot()
+	if root == nil {
+		t.Fatal("LookupMutationRoot() = nil")
+	}
+	if root.Name() != "Mutation" {
+		t.Fatalf("LookupMutationRoot().Name() = %q; want Mutation", root.Name())
+	}
+}
+
+func TestIndexLookupSubscriptionRootFallsBackToSubscriptionWithoutExplicitRoot(t *testing.T) {
+	idx := schemaindex.New(mustParseSchema(t, `
+		type Query { default: String }
+		type Subscription { changed: String }
+	`))
+
+	root := idx.LookupSubscriptionRoot()
+	if root == nil {
+		t.Fatal("LookupSubscriptionRoot() = nil")
+	}
+	if root.Name() != "Subscription" {
+		t.Fatalf("LookupSubscriptionRoot().Name() = %q; want Subscription", root.Name())
+	}
+}
+
 func TestIndexLookupMutationAndSubscriptionRootsReturnNilWhenAbsent(t *testing.T) {
 	idx := schemaindex.New(mustParseSchema(t, `type Query { default: String }`))
 
@@ -610,6 +640,25 @@ func TestIndexLookupMutationAndSubscriptionRootsReturnNilWhenAbsent(t *testing.T
 	}
 	if got := idx.LookupSubscriptionRoot(); got != nil {
 		t.Fatalf("LookupSubscriptionRoot() = %q; want nil", got.Name())
+	}
+}
+
+func TestIndexLookupMutationAndSubscriptionRootsDoNotFallBackWhenExplicitRootIsMissing(t *testing.T) {
+	idx := schemaindex.New(mustParseSchema(t, `
+		schema {
+			mutation: MissingMutation
+			subscription: MissingSubscription
+		}
+		type Query { default: String }
+		type Mutation { change: String }
+		type Subscription { changed: String }
+	`))
+
+	if got := idx.LookupMutationRoot(); got != nil {
+		t.Fatalf("LookupMutationRoot() with missing explicit root = %q; want nil", got.Name())
+	}
+	if got := idx.LookupSubscriptionRoot(); got != nil {
+		t.Fatalf("LookupSubscriptionRoot() with missing explicit root = %q; want nil", got.Name())
 	}
 }
 

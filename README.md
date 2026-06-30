@@ -106,8 +106,8 @@ first-seen document order; and object, interface, input, enum, union, and scalar
 helper accessors return base metadata followed by matching extension metadata.
 `LookupQueryRoot()`, `LookupMutationRoot()`, and `LookupSubscriptionRoot()`
 resolve explicit schema root operation declarations through indexed type
-entries; query lookup falls back to `Query` when no explicit query root is
-declared.
+entries. When an operation has no explicit root declaration, lookup falls back
+to the SDL default type name: `Query`, `Mutation`, or `Subscription`.
 
 ### Parse a single value or type literal
 

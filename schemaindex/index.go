@@ -100,24 +100,21 @@ func (idx *Index) LookupType(name string) *TypeEntry {
 }
 
 // LookupQueryRoot returns the indexed query root type entry, or nil when absent.
+// When no explicit query root is declared, it falls back to the type named Query.
 func (idx *Index) LookupQueryRoot() *TypeEntry {
-	if root := idx.lookupRootOperationType(ast.OperationQuery); root != nil {
-		return root
-	}
-	if _, ok := idx.rootOperationTypes[ast.OperationQuery]; ok {
-		return nil
-	}
-	return idx.LookupType("Query")
+	return idx.lookupRootOperationTypeWithDefault(ast.OperationQuery, "Query")
 }
 
 // LookupMutationRoot returns the indexed mutation root type entry, or nil when absent.
+// When no explicit mutation root is declared, it falls back to the type named Mutation.
 func (idx *Index) LookupMutationRoot() *TypeEntry {
-	return idx.lookupRootOperationType(ast.OperationMutation)
+	return idx.lookupRootOperationTypeWithDefault(ast.OperationMutation, "Mutation")
 }
 
 // LookupSubscriptionRoot returns the indexed subscription root type entry, or nil when absent.
+// When no explicit subscription root is declared, it falls back to the type named Subscription.
 func (idx *Index) LookupSubscriptionRoot() *TypeEntry {
-	return idx.lookupRootOperationType(ast.OperationSubscription)
+	return idx.lookupRootOperationTypeWithDefault(ast.OperationSubscription, "Subscription")
 }
 
 func (idx *Index) recordRootOperationTypes(def ast.Definition) {
@@ -143,6 +140,16 @@ func (idx *Index) lookupRootOperationType(operation ast.OperationType) *TypeEntr
 		return nil
 	}
 	return idx.LookupType(name)
+}
+
+func (idx *Index) lookupRootOperationTypeWithDefault(operation ast.OperationType, defaultName string) *TypeEntry {
+	if root := idx.lookupRootOperationType(operation); root != nil {
+		return root
+	}
+	if _, ok := idx.rootOperationTypes[operation]; ok {
+		return nil
+	}
+	return idx.LookupType(defaultName)
 }
 
 // TypeNames returns indexed type names in first-seen document order.
