@@ -25,10 +25,11 @@ type parser struct {
 
 func newParser(src *ast.Source, opts []Option) *parser {
 	cfg := newConfig(opts)
-	l := lexer.New(src)
+	var lopts []lexer.Option
 	if cfg.preserveComments {
-		l.PreserveComments = true
+		lopts = append(lopts, lexer.WithComments())
 	}
+	l := lexer.New(src, lopts...)
 	return &parser{source: src, lex: l, cfg: cfg}
 }
 

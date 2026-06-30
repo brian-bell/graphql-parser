@@ -315,8 +315,7 @@ func (p *parser) parseFieldsDefinition() (ast.FieldDefinitionList, error) {
 }
 
 func (p *parser) parseFieldDefinition() (*ast.FieldDefinition, error) {
-	leading := p.pendingLeading
-	p.pendingLeading = nil
+	leading := p.takeLeading()
 	desc, descStart, err := p.parseOptionalDescription()
 	if err != nil {
 		return nil, err
@@ -352,9 +351,7 @@ func (p *parser) parseFieldDefinition() (*ast.FieldDefinition, error) {
 		Directives:  dirs,
 		Loc:         p.loc(start),
 	}
-	if len(leading) > 0 {
-		fd.Comments = &ast.CommentGroup{Leading: leading}
-	}
+	p.bindLeading(fd, leading)
 	return fd, nil
 }
 
@@ -394,8 +391,7 @@ func (p *parser) parseArgumentsDefinition() (ast.InputValueList, error) {
 }
 
 func (p *parser) parseInputValueDefinition() (*ast.InputValueDefinition, error) {
-	leading := p.pendingLeading
-	p.pendingLeading = nil
+	leading := p.takeLeading()
 	desc, descStart, err := p.parseOptionalDescription()
 	if err != nil {
 		return nil, err
@@ -437,9 +433,7 @@ func (p *parser) parseInputValueDefinition() (*ast.InputValueDefinition, error) 
 		Directives:   dirs,
 		Loc:          p.loc(start),
 	}
-	if len(leading) > 0 {
-		iv.Comments = &ast.CommentGroup{Leading: leading}
-	}
+	p.bindLeading(iv, leading)
 	return iv, nil
 }
 
@@ -558,8 +552,7 @@ func (p *parser) parseEnumValuesDefinition() (ast.EnumValueList, error) {
 }
 
 func (p *parser) parseEnumValueDefinition() (*ast.EnumValueDefinition, error) {
-	leading := p.pendingLeading
-	p.pendingLeading = nil
+	leading := p.takeLeading()
 	desc, descStart, err := p.parseOptionalDescription()
 	if err != nil {
 		return nil, err
@@ -586,9 +579,7 @@ func (p *parser) parseEnumValueDefinition() (*ast.EnumValueDefinition, error) {
 		Directives:  dirs,
 		Loc:         p.loc(start),
 	}
-	if len(leading) > 0 {
-		ev.Comments = &ast.CommentGroup{Leading: leading}
-	}
+	p.bindLeading(ev, leading)
 	return ev, nil
 }
 

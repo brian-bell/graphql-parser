@@ -25,8 +25,9 @@ type OperationDefinition struct {
 	Comments            *CommentGroup
 }
 
-func (d *OperationDefinition) GetLoc() *Loc { return d.Loc }
-func (*OperationDefinition) isDefinition()  {}
+func (d *OperationDefinition) GetLoc() *Loc                { return d.Loc }
+func (*OperationDefinition) isDefinition()                 {}
+func (d *OperationDefinition) CommentSlot() **CommentGroup { return &d.Comments }
 
 // FragmentDefinition is a named fragment: "fragment Name on Type { ... }".
 type FragmentDefinition struct {
@@ -38,8 +39,9 @@ type FragmentDefinition struct {
 	Comments      *CommentGroup
 }
 
-func (d *FragmentDefinition) GetLoc() *Loc { return d.Loc }
-func (*FragmentDefinition) isDefinition()  {}
+func (d *FragmentDefinition) GetLoc() *Loc                { return d.Loc }
+func (*FragmentDefinition) isDefinition()                 {}
+func (d *FragmentDefinition) CommentSlot() **CommentGroup { return &d.Comments }
 
 // VariableDefinition declares an operation variable: "$name: Type = default
 // @directive...".
@@ -52,7 +54,8 @@ type VariableDefinition struct {
 	Comments     *CommentGroup
 }
 
-func (v *VariableDefinition) GetLoc() *Loc { return v.Loc }
+func (v *VariableDefinition) GetLoc() *Loc                { return v.Loc }
+func (v *VariableDefinition) CommentSlot() **CommentGroup { return &v.Comments }
 
 // SelectionSet is a "{ ... }" block of one or more Selections.
 type SelectionSet struct {
@@ -62,7 +65,8 @@ type SelectionSet struct {
 }
 
 // GetLoc returns the location covering the selection set including its braces.
-func (s *SelectionSet) GetLoc() *Loc { return s.Loc }
+func (s *SelectionSet) GetLoc() *Loc                { return s.Loc }
+func (s *SelectionSet) CommentSlot() **CommentGroup { return &s.Comments }
 
 // Field is a leaf or non-leaf selection: "[alias:] name(args)? @dir...?
 // SelectionSet?".
@@ -76,8 +80,9 @@ type Field struct {
 	Comments     *CommentGroup
 }
 
-func (f *Field) GetLoc() *Loc { return f.Loc }
-func (*Field) isSelection()   {}
+func (f *Field) GetLoc() *Loc                { return f.Loc }
+func (*Field) isSelection()                  {}
+func (f *Field) CommentSlot() **CommentGroup { return &f.Comments }
 
 // FragmentSpread is "...FragmentName Directives?". The name must not be "on";
 // the parser disambiguates against InlineFragment.
@@ -88,8 +93,9 @@ type FragmentSpread struct {
 	Comments   *CommentGroup
 }
 
-func (s *FragmentSpread) GetLoc() *Loc { return s.Loc }
-func (*FragmentSpread) isSelection()   {}
+func (s *FragmentSpread) GetLoc() *Loc                { return s.Loc }
+func (*FragmentSpread) isSelection()                  {}
+func (s *FragmentSpread) CommentSlot() **CommentGroup { return &s.Comments }
 
 // InlineFragment is "... TypeCondition? Directives? SelectionSet". The
 // type condition is optional; when absent, the fragment inherits the
@@ -102,8 +108,9 @@ type InlineFragment struct {
 	Comments      *CommentGroup
 }
 
-func (f *InlineFragment) GetLoc() *Loc { return f.Loc }
-func (*InlineFragment) isSelection()   {}
+func (f *InlineFragment) GetLoc() *Loc                { return f.Loc }
+func (*InlineFragment) isSelection()                  {}
+func (f *InlineFragment) CommentSlot() **CommentGroup { return &f.Comments }
 
 // Argument is one "name: value" entry in a function-style argument list.
 type Argument struct {
@@ -113,7 +120,8 @@ type Argument struct {
 	Comments *CommentGroup
 }
 
-func (a *Argument) GetLoc() *Loc { return a.Loc }
+func (a *Argument) GetLoc() *Loc                { return a.Loc }
+func (a *Argument) CommentSlot() **CommentGroup { return &a.Comments }
 
 // Directive is "@name(args)?". Arguments must be const values when the
 // directive appears on a type-system definition; the parser enforces this
@@ -125,4 +133,5 @@ type Directive struct {
 	Comments  *CommentGroup
 }
 
-func (d *Directive) GetLoc() *Loc { return d.Loc }
+func (d *Directive) GetLoc() *Loc                { return d.Loc }
+func (d *Directive) CommentSlot() **CommentGroup { return &d.Comments }

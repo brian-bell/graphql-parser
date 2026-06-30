@@ -30,7 +30,7 @@ func WithRecovery() Option {
 //
 // Trailing comments and value/type-level comments are not yet attributed;
 // callers needing the full comment stream can read raw COMMENT tokens
-// directly from a [lexer.Lexer] with PreserveComments=true.
+// directly from a [lexer.Lexer] constructed with [lexer.WithComments].
 func WithComments() Option {
 	return func(c *config) { c.preserveComments = true }
 }
