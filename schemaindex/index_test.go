@@ -533,6 +533,148 @@ func TestNewDoesNotValidateSchemaSemantics(t *testing.T) {
 	}
 }
 
+func TestIndexLookupQueryRootUsesExplicitSchemaDefinitionRoot(t *testing.T) {
+	doc := mustParseSchema(t, `
+		schema { query: RootQuery }
+		type Query { default: String }
+		type RootQuery { explicit: String }
+	`)
+
+	idx := schemaindex.New(doc)
+	root := idx.LookupQueryRoot()
+	if root == nil {
+		t.Fatal("LookupQueryRoot() = nil")
+	}
+	if root.Name() != "RootQuery" {
+		t.Fatalf("LookupQueryRoot().Name() = %q; want RootQuery", root.Name())
+	}
+	if root == idx.LookupType("Query") {
+		t.Fatal(`LookupQueryRoot() returned LookupType("Query"); want explicit RootQuery entry`)
+	}
+}
+
+func TestIndexLookupQueryRootFallsBackToQueryOnlyWithoutExplicitRoot(t *testing.T) {
+	doc := mustParseSchema(t, `type Query { default: String }`)
+
+	idx := schemaindex.New(doc)
+	root := idx.LookupQueryRoot()
+	if root == nil {
+		t.Fatal("LookupQueryRoot() = nil")
+	}
+	if root.Name() != "Query" {
+		t.Fatalf("LookupQueryRoot().Name() = %q; want Query", root.Name())
+	}
+
+	missingExplicitDoc := mustParseSchema(t, `
+		schema { query: MissingQuery }
+		type Query { default: String }
+	`)
+	missingExplicit := schemaindex.New(missingExplicitDoc)
+	if got := missingExplicit.LookupQueryRoot(); got != nil {
+		t.Fatalf("LookupQueryRoot() with missing explicit root = %q; want nil", got.Name())
+	}
+}
+
+func TestIndexLookupMutationAndSubscriptionRootsUseExplicitSchemaDefinitionRoots(t *testing.T) {
+	doc := mustParseSchema(t, `
+		schema {
+			mutation: RootMutation
+			subscription: RootSubscription
+		}
+		type RootMutation { change: String }
+		type RootSubscription { changed: String }
+	`)
+
+	idx := schemaindex.New(doc)
+	mutation := idx.LookupMutationRoot()
+	if mutation == nil {
+		t.Fatal("LookupMutationRoot() = nil")
+	}
+	if mutation.Name() != "RootMutation" {
+		t.Fatalf("LookupMutationRoot().Name() = %q; want RootMutation", mutation.Name())
+	}
+	subscription := idx.LookupSubscriptionRoot()
+	if subscription == nil {
+		t.Fatal("LookupSubscriptionRoot() = nil")
+	}
+	if subscription.Name() != "RootSubscription" {
+		t.Fatalf("LookupSubscriptionRoot().Name() = %q; want RootSubscription", subscription.Name())
+	}
+}
+
+func TestIndexLookupMutationAndSubscriptionRootsReturnNilWhenAbsent(t *testing.T) {
+	idx := schemaindex.New(mustParseSchema(t, `type Query { default: String }`))
+
+	if got := idx.LookupMutationRoot(); got != nil {
+		t.Fatalf("LookupMutationRoot() = %q; want nil", got.Name())
+	}
+	if got := idx.LookupSubscriptionRoot(); got != nil {
+		t.Fatalf("LookupSubscriptionRoot() = %q; want nil", got.Name())
+	}
+}
+
+func TestIndexLookupRootsUseSchemaExtensionRoots(t *testing.T) {
+	doc := mustParseSchema(t, `
+		extend schema {
+			query: RootQuery
+			mutation: RootMutation
+		}
+		type Query { default: String }
+		type RootQuery { explicit: String }
+		type RootMutation { change: String }
+	`)
+
+	idx := schemaindex.New(doc)
+	query := idx.LookupQueryRoot()
+	if query == nil {
+		t.Fatal("LookupQueryRoot() = nil")
+	}
+	if query.Name() != "RootQuery" {
+		t.Fatalf("LookupQueryRoot().Name() = %q; want RootQuery", query.Name())
+	}
+	mutation := idx.LookupMutationRoot()
+	if mutation == nil {
+		t.Fatal("LookupMutationRoot() = nil")
+	}
+	if mutation.Name() != "RootMutation" {
+		t.Fatalf("LookupMutationRoot().Name() = %q; want RootMutation", mutation.Name())
+	}
+}
+
+func TestIndexLookupRootDeclarationsUseLastSourceOrderEntry(t *testing.T) {
+	doc := mustParseSchema(t, `
+		schema {
+			query: FirstQuery
+			mutation: FirstMutation
+		}
+		extend schema {
+			query: SecondQuery
+			mutation: SecondMutation
+		}
+		extend schema {
+			subscription: FirstSubscription
+			subscription: SecondSubscription
+		}
+		type FirstQuery { field: String }
+		type SecondQuery { field: String }
+		type FirstMutation { field: String }
+		type SecondMutation { field: String }
+		type FirstSubscription { field: String }
+		type SecondSubscription { field: String }
+	`)
+
+	idx := schemaindex.New(doc)
+	if got := idx.LookupQueryRoot(); got == nil || got.Name() != "SecondQuery" {
+		t.Fatalf("LookupQueryRoot() = %v; want SecondQuery", entryName(got))
+	}
+	if got := idx.LookupMutationRoot(); got == nil || got.Name() != "SecondMutation" {
+		t.Fatalf("LookupMutationRoot() = %v; want SecondMutation", entryName(got))
+	}
+	if got := idx.LookupSubscriptionRoot(); got == nil || got.Name() != "SecondSubscription" {
+		t.Fatalf("LookupSubscriptionRoot() = %v; want SecondSubscription", entryName(got))
+	}
+}
+
 func TestNewIgnoresNonTypeDefinitions(t *testing.T) {
 	doc, err := parser.Parse(`
 		schema { query: Root }
@@ -757,6 +899,13 @@ func requireObjectTypeExtension(t *testing.T, def ast.Definition) *ast.ObjectTyp
 		t.Fatalf("extension = %T; want *ast.ObjectTypeExtension", def)
 	}
 	return objectExt
+}
+
+func entryName(entry *schemaindex.TypeEntry) string {
+	if entry == nil {
+		return "<nil>"
+	}
+	return entry.Name()
 }
 
 func assertFieldNames(t *testing.T, fields ast.FieldDefinitionList, names ...string) {

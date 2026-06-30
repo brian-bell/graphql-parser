@@ -3,21 +3,28 @@
 // The index records top-level named type definitions and matching extensions.
 // Raw base definitions and extensions stay separate, while helper accessors
 // expose base object, interface, input, enum, union, and scalar metadata
-// followed by matching extension metadata. It does not validate schema
-// semantics, merge duplicate definitions, or deduplicate folded members.
+// followed by matching extension metadata. It also records schema root
+// operation declarations for query, mutation, and subscription lookup. It does
+// not validate schema semantics, merge duplicate definitions, or deduplicate
+// folded members.
 package schemaindex
 
 import "github.com/brian-bell/graphql-parser/ast"
 
-// Index provides name-based lookup for parsed SDL type definitions.
+// Index provides name-based lookup for parsed SDL type definitions and schema
+// root operation types.
 type Index struct {
-	types map[string]*TypeEntry
-	names []string
+	types              map[string]*TypeEntry
+	names              []string
+	rootOperationTypes map[ast.OperationType]string
 }
 
 // New builds an index from doc. A nil document returns an empty index.
 func New(doc *ast.Document) *Index {
-	idx := &Index{types: make(map[string]*TypeEntry)}
+	idx := &Index{
+		types:              make(map[string]*TypeEntry),
+		rootOperationTypes: make(map[ast.OperationType]string),
+	}
 	if doc == nil {
 		return idx
 	}
@@ -31,7 +38,10 @@ func New(doc *ast.Document) *Index {
 		if name, ok := extensionTypeName(def); ok {
 			entry := idx.entryFor(name)
 			entry.extensions = append(entry.extensions, def)
+			continue
 		}
+
+		idx.recordRootOperationTypes(def)
 	}
 	return idx
 }
@@ -87,6 +97,52 @@ func extensionTypeName(def ast.Definition) (string, bool) {
 // LookupType returns the indexed type entry for name, or nil when absent.
 func (idx *Index) LookupType(name string) *TypeEntry {
 	return idx.types[name]
+}
+
+// LookupQueryRoot returns the indexed query root type entry, or nil when absent.
+func (idx *Index) LookupQueryRoot() *TypeEntry {
+	if root := idx.lookupRootOperationType(ast.OperationQuery); root != nil {
+		return root
+	}
+	if _, ok := idx.rootOperationTypes[ast.OperationQuery]; ok {
+		return nil
+	}
+	return idx.LookupType("Query")
+}
+
+// LookupMutationRoot returns the indexed mutation root type entry, or nil when absent.
+func (idx *Index) LookupMutationRoot() *TypeEntry {
+	return idx.lookupRootOperationType(ast.OperationMutation)
+}
+
+// LookupSubscriptionRoot returns the indexed subscription root type entry, or nil when absent.
+func (idx *Index) LookupSubscriptionRoot() *TypeEntry {
+	return idx.lookupRootOperationType(ast.OperationSubscription)
+}
+
+func (idx *Index) recordRootOperationTypes(def ast.Definition) {
+	var operationTypes []*ast.OperationTypeDefinition
+	switch d := def.(type) {
+	case *ast.SchemaDefinition:
+		operationTypes = d.OperationTypes
+	case *ast.SchemaExtension:
+		operationTypes = d.OperationTypes
+	default:
+		return
+	}
+	for _, operationType := range operationTypes {
+		if operationType.Type != nil {
+			idx.rootOperationTypes[operationType.Operation] = operationType.Type.Name
+		}
+	}
+}
+
+func (idx *Index) lookupRootOperationType(operation ast.OperationType) *TypeEntry {
+	name, ok := idx.rootOperationTypes[operation]
+	if !ok {
+		return nil
+	}
+	return idx.LookupType(name)
 }
 
 // TypeNames returns indexed type names in first-seen document order.
