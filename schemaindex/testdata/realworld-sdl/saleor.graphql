@@ -1,0 +1,199 @@
+schema {
+  query: Query
+  mutation: Mutation
+  subscription: Subscription
+}
+
+"""Groups fields and operations into named groups."""
+directive @doc(
+  """Name of the grouping category"""
+  category: String!
+) on ENUM | FIELD | FIELD_DEFINITION | INPUT_OBJECT | OBJECT | INTERFACE
+
+"""Webhook events triggered by a specific location."""
+directive @webhookEventsInfo(
+  """List of asynchronous webhook events triggered by a specific location."""
+  asyncEvents: [WebhookEventTypeAsyncEnum!]!
+
+  """List of synchronous webhook events triggered by a specific location."""
+  syncEvents: [WebhookEventTypeSyncEnum!]!
+) on FIELD | FIELD_DEFINITION | INPUT_OBJECT | OBJECT
+
+type Query {
+  """
+  Look up a webhook by ID. Requires one of the following permissions: MANAGE_APPS, OWNER.
+  """
+  webhook(
+    """ID of the webhook."""
+    id: ID!
+  ): Webhook @doc(category: "Webhooks")
+
+  """
+  List of all available webhook events.
+
+  Requires one of the following permissions: MANAGE_APPS.
+  """
+  webhookEvents: [WebhookEvent!] @doc(category: "Webhooks") @deprecated(reason: "Use `WebhookEventTypeAsyncEnum` and `WebhookEventTypeSyncEnum` to get available event types.")
+}
+
+type Webhook implements Node @doc(category: "Webhooks") {
+  """The ID of webhook."""
+  id: ID!
+
+  """The name of webhook."""
+  name: String
+
+  """List of webhook events."""
+  events: [WebhookEvent!]! @deprecated(reason: "Use `asyncEvents` or `syncEvents` instead.")
+
+  """List of synchronous webhook events."""
+  syncEvents: [WebhookEventSync!]!
+
+  """List of asynchronous webhook events."""
+  asyncEvents: [WebhookEventAsync!]!
+}
+
+type WebhookEvent @doc(category: "Webhooks") {
+  """Display name of the event."""
+  name: String!
+
+  """Internal name of the event type."""
+  eventType: WebhookEventTypeEnum!
+}
+
+enum WebhookEventTypeEnum @doc(category: "Webhooks") {
+  """All the events."""
+  ANY_EVENTS @deprecated
+
+  """An account confirmation is requested."""
+  ACCOUNT_CONFIRMATION_REQUESTED
+
+  """An account email change is requested."""
+  ACCOUNT_CHANGE_EMAIL_REQUESTED
+}
+
+type WebhookEventSync @doc(category: "Webhooks") {
+  """Display name of the event."""
+  name: String!
+
+  """Internal name of the event type."""
+  eventType: WebhookEventTypeSyncEnum!
+}
+
+enum WebhookEventTypeSyncEnum @doc(category: "Webhooks") {
+  """Listing available payment gateways."""
+  PAYMENT_LIST_GATEWAYS
+
+  """Authorize payment."""
+  PAYMENT_AUTHORIZE
+
+  """Capture payment."""
+  PAYMENT_CAPTURE
+}
+
+type WebhookEventAsync @doc(category: "Webhooks") {
+  eventType: WebhookEventTypeAsyncEnum!
+}
+
+"""Enum determining type of webhook."""
+enum WebhookEventTypeAsyncEnum @doc(category: "Webhooks") {
+  """All the events."""
+  ANY_EVENTS @deprecated
+
+  """An account confirmation is requested."""
+  ACCOUNT_CONFIRMATION_REQUESTED
+
+  """An account email change is requested."""
+  ACCOUNT_CHANGE_EMAIL_REQUESTED
+
+  """An account email was changed"""
+  ACCOUNT_EMAIL_CHANGED
+}
+
+type Mutation {
+  """
+  Creates a new webhook subscription.
+
+  Requires one of the following permissions: MANAGE_APPS, AUTHENTICATED_APP.
+  """
+  webhookCreate(
+    """Fields required to create a webhook."""
+    input: WebhookCreateInput!
+  ): WebhookCreate @doc(category: "Webhooks")
+
+  """
+  Deletes a webhook. Before the deletion, the webhook is deactivated to pause any deliveries that are already scheduled. The deletion might fail if delivery is in progress. In such a case, the webhook is not deleted but remains deactivated.
+
+  Requires one of the following permissions: MANAGE_APPS, AUTHENTICATED_APP.
+  """
+  webhookDelete(
+    """ID of a webhook to delete."""
+    id: ID!
+  ): WebhookDelete @doc(category: "Webhooks")
+
+  """
+  Updates a webhook subscription.
+
+  Requires one of the following permissions: MANAGE_APPS, AUTHENTICATED_APP.
+  """
+  webhookUpdate(
+    """ID of a webhook to update."""
+    id: ID!
+
+    """Fields required to update a webhook."""
+    input: WebhookUpdateInput!
+  ): WebhookUpdate @doc(category: "Webhooks")
+}
+
+input WebhookCreateInput @doc(category: "Webhooks") {
+  """The name of the webhook."""
+  name: String
+
+  """The url to receive the payload."""
+  targetUrl: String
+
+  """The events that webhook wants to subscribe."""
+  events: [WebhookEventTypeEnum!] @deprecated(reason: "Use `asyncEvents` or `syncEvents` instead.")
+
+  """The asynchronous events that webhook wants to subscribe."""
+  asyncEvents: [WebhookEventTypeAsyncEnum!]
+
+  """The synchronous events that webhook wants to subscribe."""
+  syncEvents: [WebhookEventTypeSyncEnum!]
+
+  """ID of the app to which webhook belongs."""
+  app: ID
+
+  """Determine if webhook will be set active or not."""
+  isActive: Boolean
+
+  """The secret key used to create a hash signature with each payload."""
+  secretKey: String @deprecated(reason: "As of Saleor 3.5, webhook payloads default to signing using a verifiable JWS.")
+
+  """Subscription query used to define a webhook payload."""
+  query: String
+
+  """
+  Custom headers, which will be added to HTTP request. There is a limitation of 5 headers per webhook and 998 characters per header.Only `X-*`, `Authorization*`, and `BrokerProperties` keys are allowed.
+  """
+  customHeaders: JSONString
+}
+
+type Subscription @doc(category: "Miscellaneous") {
+  """Look up subscription event."""
+  event: Event
+
+  """
+  Event sent when new draft order is created.
+
+  Added in Saleor 3.20.
+
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  draftOrderCreated(
+    """
+    List of channel slugs. The event will be sent only if the object belongs to one of the provided channels. If the channel slug list is empty, objects that belong to any channel will be sent. Maximally 500 items.
+    """
+    channels: [String!]
+  ): DraftOrderCreated @doc(category: "Orders")
+}

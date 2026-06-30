@@ -1,0 +1,7 @@
+directive @tag(name: String!) repeatable on OBJECT
+
+type CatalogItem {
+  id: ID!
+}
+
+extend type CatalogItem @tag(name: "locally-constructed-directive-only-extension")
