@@ -35,7 +35,7 @@ LSP can depend on AST types without dragging in the parser.
 - `ast/` - `Node`, `Definition`, `Selection`, `Value`, `Type` interfaces; concrete pointer-receiver structs for every spec production; `Source`, `Position`, `Loc` with a lazy line-start index; `BlockStringValue`, `TypeString`, `NamedTypeName`, and `DirectiveStringArg` helpers; `Walk`/`Inspect`; `SyntaxError` with the graphql-js-style snippet renderer.
 - `lexer/` - synchronous, single-token-lookahead, hand-written tokenizer. `Token` carries byte offsets plus a `Value` that is a sub-slice of source for `NAME`/`INT`/`FLOAT`. `STRING` tokens own their decoded value. `Lexer.PreserveComments` is the internal switch the parser flips for `WithComments`.
 - `parser/` - recursive descent. Public API is `Parse`, `ParseSource`, `ParseSchema`, `ParseSchemaSource`, `ParseValue`, `ParseConstValue`, `ParseType`, plus `WithRecovery()` and `WithComments()`. Everything else is unexported.
-- `schemaindex/` - small public SDL index over a parsed `*ast.Document`. `New` records the six named type definitions and six matching extension forms by name, keeps base definitions and extensions separate in source order, ignores non-type definitions, and does not validate or fold schema semantics.
+- `schemaindex/` - small public SDL index over a parsed `*ast.Document`. `New` records the six named type definitions and six matching extension forms by name, keeps base definitions and extensions separate in source order, ignores non-type definitions, and does not validate schema semantics. Object, interface, and input helper accessors expose base members followed by matching extension members without deduplicating or merging raw definitions.
 
 ### Key invariants
 

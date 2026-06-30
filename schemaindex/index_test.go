@@ -516,6 +516,8 @@ func TestTypeEntryFoldedMemberSlicesAreCopies(t *testing.T) {
 	doc := mustParseSchema(t, `
 		type User implements Node { id: ID }
 		extend type User implements Resource { name: String }
+		interface Entity implements Node { id: ID }
+		extend interface Entity implements Resource { name: String }
 		input UserInput { id: ID }
 		extend input UserInput { name: String }
 	`)
@@ -532,6 +534,18 @@ func TestTypeEntryFoldedMemberSlicesAreCopies(t *testing.T) {
 	interfaces := user.ObjectInterfaces()
 	interfaces[0] = nil
 	assertNamedTypeNames(t, user.ObjectInterfaces(), "Node", "Resource")
+
+	entity := idx.LookupType("Entity")
+	if entity == nil {
+		t.Fatal(`LookupType("Entity") = nil`)
+	}
+	interfaceFields := entity.InterfaceFields()
+	interfaceFields[0] = nil
+	assertFieldNames(t, entity.InterfaceFields(), "id", "name")
+
+	interfaceInterfaces := entity.InterfaceInterfaces()
+	interfaceInterfaces[0] = nil
+	assertNamedTypeNames(t, entity.InterfaceInterfaces(), "Node", "Resource")
 
 	userInput := idx.LookupType("UserInput")
 	if userInput == nil {
