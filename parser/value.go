@@ -76,11 +76,12 @@ func (p *parser) parseVariable() (*ast.Variable, error) {
 	if err != nil {
 		return nil, err
 	}
+	scope := p.scopeAt(dollar.Start)
 	name, err := p.expect(lexer.NAME)
 	if err != nil {
 		return nil, err
 	}
-	return &ast.Variable{Name: name.Value, Loc: p.scopeAt(dollar.Start).close()}, nil
+	return &ast.Variable{Name: name.Value, Loc: scope.close()}, nil
 }
 
 func (p *parser) parseListValue(isConst bool) (*ast.ListValue, error) {
@@ -152,6 +153,7 @@ func (p *parser) parseObjectField(isConst bool) (*ast.ObjectField, error) {
 	if err != nil {
 		return nil, err
 	}
+	scope := p.scopeAt(name.Start)
 	if _, err := p.expect(lexer.COLON); err != nil {
 		return nil, err
 	}
@@ -159,5 +161,5 @@ func (p *parser) parseObjectField(isConst bool) (*ast.ObjectField, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &ast.ObjectField{Name: name.Value, Value: v, Loc: p.scopeAt(name.Start).close()}, nil
+	return &ast.ObjectField{Name: name.Value, Value: v, Loc: scope.close()}, nil
 }

@@ -27,6 +27,7 @@ func (p *parser) parseDocument() (*ast.Document, error) {
 			break
 		}
 		defStart := tok.Start
+		badScope := p.scopeAt(defStart)
 		// Capture the leading-comment buffer for THIS definition before any
 		// inner parser (e.g. its first FieldDefinition) can take it.
 		defLeading := p.takeLeading()
@@ -37,7 +38,7 @@ func (p *parser) parseDocument() (*ast.Document, error) {
 			}
 			se, _ := err.(*ast.SyntaxError)
 			p.skipToDefinitionStart()
-			defs = append(defs, &ast.BadDefinition{Err: se, Loc: p.scopeAt(defStart).close()})
+			defs = append(defs, &ast.BadDefinition{Err: se, Loc: badScope.close()})
 			continue
 		}
 		p.bindLeading(def, defLeading)

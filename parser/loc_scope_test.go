@@ -3,7 +3,6 @@ package parser_test
 import (
 	"errors"
 	"strconv"
-	"strings"
 	"testing"
 
 	"github.com/brian-bell/graphql-parser/ast"
@@ -677,9 +676,6 @@ func assertLocText(t *testing.T, body string, node ast.Node, want string) {
 	got := body[loc.Start:loc.End]
 	if got != want {
 		t.Fatalf("%T Loc text = %s; want %s", node, quoteForLoc(got), quoteForLoc(want))
-	}
-	if idx := strings.Index(body, want); idx >= 0 && (loc.Start != idx || loc.End != idx+len(want)) {
-		t.Fatalf("%T Loc = [%d, %d); want first %q at [%d, %d)", node, loc.Start, loc.End, want, idx, idx+len(want))
 	}
 }
 

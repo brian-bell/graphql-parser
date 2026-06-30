@@ -20,9 +20,10 @@ func (p *parser) parseTypeReference() (ast.Type, error) {
 		return nil, err
 	}
 	var inner ast.Type
+	var scope prodScope
 	switch tok.Kind {
 	case lexer.LBRACKET:
-		scope := p.scopeAt(tok.Start)
+		scope = p.scopeAt(tok.Start)
 		if _, err := p.advance(); err != nil {
 			return nil, err
 		}
@@ -35,7 +36,7 @@ func (p *parser) parseTypeReference() (ast.Type, error) {
 		}
 		inner = &ast.ListType{OfType: of, Loc: scope.close()}
 	case lexer.NAME:
-		scope := p.scopeAt(tok.Start)
+		scope = p.scopeAt(tok.Start)
 		name, err := p.advance()
 		if err != nil {
 			return nil, err
@@ -50,7 +51,7 @@ func (p *parser) parseTypeReference() (ast.Type, error) {
 		return nil, err
 	}
 	if ok {
-		return &ast.NonNullType{OfType: inner, Loc: p.scopeAt(inner.GetLoc().Start).close()}, nil
+		return &ast.NonNullType{OfType: inner, Loc: scope.close()}, nil
 	}
 	return inner, nil
 }

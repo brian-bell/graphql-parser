@@ -126,11 +126,16 @@ func (p *parser) parseFragmentName() (string, error) {
 }
 
 func (p *parser) parseNamedType() (*ast.NamedType, error) {
+	tok, err := p.peek()
+	if err != nil {
+		return nil, err
+	}
+	scope := p.scopeAt(tok.Start)
 	name, err := p.expect(lexer.NAME)
 	if err != nil {
 		return nil, err
 	}
-	return &ast.NamedType{Name: name.Value, Loc: p.scopeAt(name.Start).close()}, nil
+	return &ast.NamedType{Name: name.Value, Loc: scope.close()}, nil
 }
 
 func (p *parser) parseVariableDefinitions() (ast.VariableDefinitionList, error) {

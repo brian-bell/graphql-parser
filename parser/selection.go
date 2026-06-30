@@ -33,6 +33,7 @@ func (p *parser) parseSelectionSet() (*ast.SelectionSet, error) {
 			return nil, p.errAtTok(tok, "Expected '}', found <EOF>.")
 		}
 		selStart := tok.Start
+		badScope := p.scopeAt(selStart)
 		s, err := p.parseSelection()
 		if err != nil {
 			if !p.recordError(err) {
@@ -40,7 +41,7 @@ func (p *parser) parseSelectionSet() (*ast.SelectionSet, error) {
 			}
 			se, _ := err.(*ast.SyntaxError)
 			p.skipToSelectionStart()
-			sels = append(sels, &ast.BadField{Err: se, Loc: p.scopeAt(selStart).close()})
+			sels = append(sels, &ast.BadField{Err: se, Loc: badScope.close()})
 			continue
 		}
 		sels = append(sels, s)
