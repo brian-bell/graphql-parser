@@ -14,6 +14,9 @@ type Document struct {
 // GetLoc returns the document's location.
 func (d *Document) GetLoc() *Loc { return d.Loc }
 
+// CommentSlot returns a pointer to the document's Comments field.
+func (d *Document) CommentSlot() **CommentGroup { return &d.Comments }
+
 // DefinitionList is a slice of Definition with helper methods.
 type DefinitionList []Definition
 

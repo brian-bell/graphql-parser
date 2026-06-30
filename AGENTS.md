@@ -32,8 +32,8 @@ LSP can depend on AST types without dragging in the parser.
 
 ### Package responsibilities
 
-- `ast/` - `Node`, `Definition`, `Selection`, `Value`, `Type` interfaces; concrete pointer-receiver structs for every spec production; `Source`, `Position`, `Loc` with a lazy line-start index; `BlockStringValue`, `TypeString`, `NamedTypeName`, and `DirectiveStringArg` helpers; `Walk`/`Inspect`; `SyntaxError` with the graphql-js-style snippet renderer.
-- `lexer/` - synchronous, single-token-lookahead, hand-written tokenizer. `Token` carries byte offsets plus a `Value` that is a sub-slice of source for `NAME`/`INT`/`FLOAT`. `STRING` tokens own their decoded value. `Lexer.PreserveComments` is the internal switch the parser flips for `WithComments`.
+- `ast/` - `Node`, `Definition`, `Selection`, `Value`, `Type` interfaces; the `CommentedNode` interface (`CommentSlot() **CommentGroup`) implemented by every struct that carries a `Comments` field; concrete pointer-receiver structs for every spec production; `Source`, `Position`, `Loc` with a lazy line-start index; `BlockStringValue`, `TypeString`, `NamedTypeName`, and `DirectiveStringArg` helpers; `Walk`/`Inspect`; `SyntaxError` with the graphql-js-style snippet renderer.
+- `lexer/` - synchronous, single-token-lookahead, hand-written tokenizer. `Token` carries byte offsets plus a `Value` that is a sub-slice of source for `NAME`/`INT`/`FLOAT`. `STRING` tokens own their decoded value. Comment emission is sealed at construction via the `lexer.WithComments()` option to `lexer.New`; the parser passes it through when run with `WithComments`.
 - `parser/` - recursive descent. Public API is `Parse`, `ParseSource`, `ParseSchema`, `ParseSchemaSource`, `ParseValue`, `ParseConstValue`, `ParseType`, plus `WithRecovery()` and `WithComments()`. Everything else is unexported.
 - `schemaindex/` - small public SDL index over a parsed `*ast.Document`. `New` records the six named type definitions and six matching extension forms by name, keeps base definitions and extensions separate in source order, ignores non-type definitions, and does not validate schema semantics. Object, interface, input, enum, union, and scalar helper accessors expose base members followed by matching extension members without deduplicating or merging raw definitions. `LookupQueryRoot`/`LookupMutationRoot`/`LookupSubscriptionRoot` resolve `schema { ... }` and `extend schema` operation roots (last declaration in source order wins) through indexed type entries, falling back to SDL default root type names (`Query`, `Mutation`, `Subscription`) only when no explicit root is declared for that operation.
 
@@ -70,16 +70,29 @@ before `parseDefinition` is called, otherwise the first inner
 pattern:
 
 ```go
-defLeading := p.pendingLeading
-p.pendingLeading = nil
+leading := p.takeLeading()       // capture + clear the buffer at entry
 def, err := p.parseDefinition()
 ...
-attachLeadingComments(def, defLeading)
+p.bindLeading(def, leading)      // attach after the node is built
 ```
 
-`commentGroupOf(node)` is a type-switch returning `**ast.CommentGroup` for
-nodes that have a `Comments` field. Extend this when adding new node types that
-should carry trivia.
+`takeLeading` returns and clears `pendingLeading` so children start with an
+empty buffer (preserving capture-at-entry attribution); it runs unconditionally
+even when preservation is off. `bindLeading` attaches the captured comments
+through the `ast.CommentedNode` interface — a no-op when preservation is off,
+the slice is empty, or the node is nil.
+
+Every node with a `Comments *ast.CommentGroup` field implements
+`ast.CommentedNode` via a one-line `CommentSlot() **ast.CommentGroup` method, so
+there is no type switch to keep in sync. `bindLeading` is intentionally
+permissive: the assertion succeeds for any commented node, so binding *scope* is
+controlled by **where** `bindLeading` is called (currently only top-level
+definitions plus field, input-value, and enum-value definitions), not by the
+helper rejecting node types. Binding a new node type is a one-line `bindLeading`
+call at its production, not a switch case — but doing so is a behavior change
+that needs its own tests. The `ast/comment_test.go` registry + parity meta-test
+fails to compile (or fails at runtime) if a `Comments`-bearing struct is missing
+the method or the registry.
 
 ### Type-system parser dispatch
 

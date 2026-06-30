@@ -239,9 +239,24 @@ func TestLexer_CommentSkippedByDefault(t *testing.T) {
 	}
 }
 
+func TestLexer_DefaultSkipsComments(t *testing.T) {
+	l := lexer.New(&ast.Source{Body: "# hello\nfoo", Name: "test.graphql"})
+	tok := mustNext(t, l)
+	if tok.Kind != lexer.NAME || tok.Value != "foo" {
+		t.Errorf("default New should skip comments; got %v %q", tok.Kind, tok.Value)
+	}
+}
+
+func TestLexer_WithCommentsOption(t *testing.T) {
+	l := lexer.New(&ast.Source{Body: "# hello\nfoo", Name: "test.graphql"}, lexer.WithComments())
+	tok := mustNext(t, l)
+	if tok.Kind != lexer.COMMENT || tok.Value != " hello" {
+		t.Errorf("WithComments should emit COMMENT; got %v %q", tok.Kind, tok.Value)
+	}
+}
+
 func TestLexer_CommentRetained(t *testing.T) {
-	l := lex(t, "# hello\nfoo")
-	l.PreserveComments = true
+	l := lexer.New(&ast.Source{Body: "# hello\nfoo", Name: "test.graphql"}, lexer.WithComments())
 	tok := mustNext(t, l)
 	if tok.Kind != lexer.COMMENT {
 		t.Fatalf("got %v; want COMMENT", tok.Kind)

@@ -15,22 +15,41 @@ type Lexer struct {
 	body   string // == source.Body, cached for the hot loop
 	pos    int    // current byte offset into body
 
-	// PreserveComments controls whether COMMENT tokens reach the caller.
+	// preserveComments controls whether COMMENT tokens reach the caller.
 	// When false (the default), the lexer skips comments silently as required
 	// by the GraphQL grammar (they are "ignored tokens"). When true, each
 	// comment is emitted as a COMMENT token whose Value is the text after
-	// '#' up to (but not including) the line terminator.
-	PreserveComments bool
+	// '#' up to (but not including) the line terminator. Set it through the
+	// WithComments constructor option; it is sealed at construction.
+	preserveComments bool
 
 	peeked    bool
 	peekedTok Token
 	peekedErr error
 }
 
+// Option configures a Lexer at construction time.
+type Option func(*Lexer)
+
+// WithComments makes the lexer emit COMMENT tokens instead of silently
+// skipping them. Without this option the lexer treats comments as ignored
+// tokens per the GraphQL grammar. The parser flips this on for its own lexer
+// when run with parser.WithComments.
+func WithComments() Option {
+	return func(l *Lexer) { l.preserveComments = true }
+}
+
 // New constructs a Lexer for the given source. The source must outlive the
-// Lexer; tokens hold byte offsets into Source.Body.
-func New(src *ast.Source) *Lexer {
-	return &Lexer{source: src, body: src.Body}
+// Lexer; tokens hold byte offsets into Source.Body. Pass WithComments to make
+// the lexer emit COMMENT tokens; by default comments are skipped.
+func New(src *ast.Source, opts ...Option) *Lexer {
+	l := &Lexer{source: src, body: src.Body}
+	for _, opt := range opts {
+		if opt != nil {
+			opt(l)
+		}
+	}
+	return l
 }
 
 // Source returns the underlying source.
@@ -148,7 +167,7 @@ func (l *Lexer) singleByte(k Kind) Token {
 }
 
 // skipIgnored advances past ignored tokens: BOM, whitespace, line terminators,
-// commas, and (when PreserveComments is false) comments. Comments are always
+// commas, and (when comment preservation is off) comments. Comments are always
 // lexed for their byte range; this method just skips them when retention is off.
 func (l *Lexer) skipIgnored() {
 	for l.pos < len(l.body) {
@@ -164,7 +183,7 @@ func (l *Lexer) skipIgnored() {
 			}
 			return
 		case '#':
-			if l.PreserveComments {
+			if l.preserveComments {
 				return
 			}
 			// Skip to end of line; do not consume the terminator (the loop
@@ -180,10 +199,10 @@ func (l *Lexer) skipIgnored() {
 
 // lexComment reads a # comment, starting at the '#'. The returned token's
 // Value is the comment text (after '#', before the line terminator).
-// It returns ok=false if PreserveComments is false; in that case the caller
-// should resume looking for the next non-ignored token.
+// It returns ok=false when comment preservation is off; in that case the
+// caller should resume looking for the next non-ignored token.
 func (l *Lexer) lexComment() (Token, bool, error) {
-	if !l.PreserveComments {
+	if !l.preserveComments {
 		// skipIgnored should have absorbed it; defensive.
 		for l.pos < len(l.body) && l.body[l.pos] != '\n' && l.body[l.pos] != '\r' {
 			l.pos++
