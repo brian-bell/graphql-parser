@@ -23,6 +23,11 @@ type parser struct {
 	pendingLeading []*ast.Comment
 }
 
+type prodScope struct {
+	p     *parser
+	start int
+}
+
 func newParser(src *ast.Source, opts []Option) *parser {
 	cfg := newConfig(opts)
 	var lopts []lexer.Option
@@ -50,6 +55,22 @@ func (p *parser) advance() (lexer.Token, error) {
 	}
 	p.lastEnd = tok.End
 	return tok, nil
+}
+
+func (p *parser) enter() (prodScope, error) {
+	tok, err := p.peek()
+	if err != nil {
+		return prodScope{}, err
+	}
+	return p.scopeAt(tok.Start), nil
+}
+
+func (p *parser) scopeAt(start int) prodScope {
+	return prodScope{p: p, start: start}
+}
+
+func (s prodScope) close() *ast.Loc {
+	return &ast.Loc{Start: s.start, End: s.p.lastEnd, Source: s.p.source}
 }
 
 // expect consumes the next token, returning an error if its kind is not k.
@@ -117,11 +138,6 @@ func (p *parser) expectEOF() error {
 		return p.errAtTok(tok, fmt.Sprintf("Expected <EOF>, found %s.", describeToken(tok)))
 	}
 	return nil
-}
-
-// loc constructs an *ast.Loc covering [start, p.lastEnd).
-func (p *parser) loc(start int) *ast.Loc {
-	return &ast.Loc{Start: start, End: p.lastEnd, Source: p.source}
 }
 
 // errAtTok builds a SyntaxError pointing at a specific token.

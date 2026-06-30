@@ -8,8 +8,11 @@ import (
 // parseSelectionSet parses "{ Selection+ }". An empty selection set is a
 // syntax error per spec.
 func (p *parser) parseSelectionSet() (*ast.SelectionSet, error) {
-	open, err := p.expect(lexer.LBRACE)
+	scope, err := p.enter()
 	if err != nil {
+		return nil, err
+	}
+	if _, err := p.expect(lexer.LBRACE); err != nil {
 		return nil, err
 	}
 	var sels []ast.Selection
@@ -30,6 +33,7 @@ func (p *parser) parseSelectionSet() (*ast.SelectionSet, error) {
 			return nil, p.errAtTok(tok, "Expected '}', found <EOF>.")
 		}
 		selStart := tok.Start
+		badScope := p.scopeAt(selStart)
 		s, err := p.parseSelection()
 		if err != nil {
 			if !p.recordError(err) {
@@ -37,7 +41,7 @@ func (p *parser) parseSelectionSet() (*ast.SelectionSet, error) {
 			}
 			se, _ := err.(*ast.SyntaxError)
 			p.skipToSelectionStart()
-			sels = append(sels, &ast.BadField{Err: se, Loc: p.loc(selStart)})
+			sels = append(sels, &ast.BadField{Err: se, Loc: badScope.close()})
 			continue
 		}
 		sels = append(sels, s)
@@ -48,7 +52,7 @@ func (p *parser) parseSelectionSet() (*ast.SelectionSet, error) {
 	if len(sels) == 0 {
 		return nil, p.errAtTok(lexer.Token{Start: p.lastEnd}, "Expected at least one selection.")
 	}
-	return &ast.SelectionSet{Selections: sels, Loc: p.loc(open.Start)}, nil
+	return &ast.SelectionSet{Selections: sels, Loc: scope.close()}, nil
 }
 
 func (p *parser) parseSelection() (ast.Selection, error) {
@@ -68,6 +72,7 @@ func (p *parser) parseField() (*ast.Field, error) {
 	if err != nil {
 		return nil, err
 	}
+	scope := p.scopeAt(first.Start)
 	field := &ast.Field{}
 
 	// If the next token is a colon, the first NAME was an alias.
@@ -109,7 +114,7 @@ func (p *parser) parseField() (*ast.Field, error) {
 		field.SelectionSet = set
 	}
 
-	field.Loc = p.loc(first.Start)
+	field.Loc = scope.close()
 	return field, nil
 }
 
@@ -124,6 +129,7 @@ func (p *parser) parseFragment() (ast.Selection, error) {
 	if err != nil {
 		return nil, err
 	}
+	scope := p.scopeAt(spread.Start)
 	tok, err := p.peek()
 	if err != nil {
 		return nil, err
@@ -149,7 +155,7 @@ func (p *parser) parseFragment() (ast.Selection, error) {
 			TypeCondition: cond,
 			Directives:    dirs,
 			SelectionSet:  set,
-			Loc:           p.loc(spread.Start),
+			Loc:           scope.close(),
 		}, nil
 	}
 	// "...Name" is a FragmentSpread (Name is not "on").
@@ -165,7 +171,7 @@ func (p *parser) parseFragment() (ast.Selection, error) {
 		return &ast.FragmentSpread{
 			Name:       name.Value,
 			Directives: dirs,
-			Loc:        p.loc(spread.Start),
+			Loc:        scope.close(),
 		}, nil
 	}
 	// "...@dir { ... }" or "...{ ... }" is an InlineFragment without TypeCondition.
@@ -181,7 +187,7 @@ func (p *parser) parseFragment() (ast.Selection, error) {
 		return &ast.InlineFragment{
 			Directives:   dirs,
 			SelectionSet: set,
-			Loc:          p.loc(spread.Start),
+			Loc:          scope.close(),
 		}, nil
 	}
 	return nil, p.errAtTok(tok, "Expected fragment spread or inline fragment, found "+describeToken(tok)+".")
