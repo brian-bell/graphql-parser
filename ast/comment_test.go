@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"runtime"
 	"sort"
+	"strings"
 	"testing"
 
 	gast "github.com/brian-bell/graphql-parser/ast"
@@ -89,8 +90,7 @@ func structsWithCommentsField(t *testing.T) map[string]bool {
 	found := map[string]bool{}
 	fset := token.NewFileSet()
 	for _, path := range matches {
-		if filepath.Base(path) != "" && len(path) >= len("_test.go") &&
-			path[len(path)-len("_test.go"):] == "_test.go" {
+		if strings.HasSuffix(path, "_test.go") {
 			continue
 		}
 		file, err := goparser.ParseFile(fset, path, nil, 0)
