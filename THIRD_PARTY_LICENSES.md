@@ -32,9 +32,8 @@ THE SOFTWARE.
 
 ## Real-world SDL fixtures
 
-The checked-in fixture excerpts under `schemaindex/testdata/realworld-sdl/`
-are copied or composed from the pinned sources documented in that directory's
-README.
+The checked-in fixtures under `schemaindex/testdata/realworld-sdl/` are copied
+or composed from the pinned sources documented in that directory's README.
 
 ### octokit/graphql-schema
 
@@ -134,11 +133,27 @@ SOFTWARE.
 
 ### graphql/swapi-graphql
 
-`schemaindex/testdata/realworld-sdl/swapi.graphql` includes excerpts from
-`graphql/swapi-graphql`. The pinned `package.json` declares BSD-3-Clause
+`schemaindex/testdata/realworld-sdl/swapi.graphql` includes the full pinned
+`schema.graphql` file from `graphql/swapi-graphql`. The pinned `package.json`
+declares BSD-3-Clause
 licensing and contributors Nicholas Schrock and Daniel Schafer. The repository
-does not include a root license file at the pinned commit. The BSD 3-Clause
-License text is:
+does not include a root license file at the pinned commit.
+
+Relevant pinned `package.json` fields:
+
+```json
+{
+  "name": "swapi-graphql",
+  "contributors": [
+    "Nicholas Schrock <schrockn@fb.com>",
+    "Daniel Schafer <dschafer@fb.com>"
+  ],
+  "license": "BSD-3-Clause",
+  "homepage": "https://github.com/graphql/swapi-graphql"
+}
+```
+
+The BSD 3-Clause License text is:
 
 ```
 BSD 3-Clause License

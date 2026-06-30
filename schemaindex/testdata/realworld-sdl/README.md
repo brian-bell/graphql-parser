@@ -55,11 +55,11 @@ tests. Tests must not download upstream SDL at runtime.
 - Commit: `8c0bf5868f11fe84942548180751fceeb36bd606`
 - License: BSD-3-Clause from pinned `package.json`; no root license file exists
   at this commit. See `THIRD_PARTY_LICENSES.md`.
-- Copied ranges: lines 1-38, 112-146, 257-275, and 643-662.
-- Trimming: unrelated connection and object types were omitted. The `Root`
-  definition was shortened to retained fields and then closed locally.
-- Coverage: explicit non-`Query` schema root, Relay-style connection and edge
-  types, object interface implementation, and root field lookup.
+- Copied ranges: full `schema.graphql` file, lines 1-1166.
+- Trimming: none.
+- Coverage: large-schema parse smoke coverage, explicit non-`Query` schema
+  root, Relay-style connection and edge types, object interface implementation,
+  and root field lookup.
 
 ## directive-only-extension.graphql
 

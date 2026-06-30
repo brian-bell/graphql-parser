@@ -104,17 +104,26 @@ func TestSaleorFixtureIndexesExplicitRootsAndHelpers(t *testing.T) {
 }
 
 func TestSWAPIFixtureIndexesExplicitRootAndRelayFields(t *testing.T) {
-	idx := realWorldFixtureIndex(t, "swapi.graphql")
+	doc := realWorldFixtureDocument(t, "swapi.graphql")
+	if got, want := len(doc.Definitions), 54; got != want {
+		t.Fatalf("SWAPI definition count = %d; want %d for full pinned fixture coverage", got, want)
+	}
+	idx := schemaindex.New(doc)
 
 	root := idx.LookupQueryRoot()
 	assertRootName(t, "LookupQueryRoot", root, "Root")
-	assertFieldNames(t, root.ObjectFields(), "allFilms", "film", "node")
+	assertFieldExists(t, root.ObjectFields(), "allFilms")
+	assertFieldExists(t, root.ObjectFields(), "film")
+	assertFieldExists(t, root.ObjectFields(), "node")
 
 	film := requireRealWorldEntry(t, idx, "Film")
 	assertNamedTypeNames(t, film.ObjectInterfaces(), "Node")
 
 	filmsConnection := requireRealWorldEntry(t, idx, "FilmsConnection")
 	assertFieldNames(t, filmsConnection.ObjectFields(), "pageInfo", "edges", "totalCount", "films")
+
+	vehiclesEdge := requireRealWorldEntry(t, idx, "VehiclesEdge")
+	assertFieldNames(t, vehiclesEdge.ObjectFields(), "node", "cursor")
 }
 
 func TestGitHubFixtureExercisesDeprecatedDirectiveAndUnionMembers(t *testing.T) {
@@ -190,6 +199,13 @@ func assertRootName(t *testing.T, lookup string, entry *schemaindex.TypeEntry, n
 	}
 	if entry.Name() != name {
 		t.Fatalf("%s().Name() = %q; want %q", lookup, entry.Name(), name)
+	}
+}
+
+func assertFieldExists(t *testing.T, fields ast.FieldDefinitionList, name string) {
+	t.Helper()
+	if fields.ForName(name) == nil {
+		t.Fatalf("field %q = nil", name)
 	}
 }
 
