@@ -76,7 +76,9 @@ import (
 )
 
 schemaDoc, err := parser.ParseSchema(`
+    schema { query: Query mutation: Mutation }
     type Query { user: User }
+    type Mutation { updateUser: User }
     extend type Query { viewer: User }
     enum Status { ACTIVE }
     extend enum Status { ARCHIVED }
@@ -86,13 +88,15 @@ if err != nil { panic(err) }
 idx := schemaindex.New(schemaDoc)
 names := idx.TypeNames()
 query := idx.LookupType("Query")
+queryRoot := idx.LookupQueryRoot()
+mutationRoot := idx.LookupMutationRoot()
 base := query.BaseDefinitions()[0].(*ast.ObjectTypeDefinition)
 ext := query.Extensions()[0].(*ast.ObjectTypeExtension)
 fields := query.ObjectFields()
 status := idx.LookupType("Status")
 values := status.EnumValues()
 
-fmt.Println(names[0], base.Name, ext.Fields[0].Name, fields[1].Name, values[1].Name)
+fmt.Println(names[0], queryRoot.Name(), mutationRoot.Name(), base.Name, ext.Fields[0].Name, fields[1].Name, values[1].Name)
 ```
 
 The index does not validate schema semantics, enforce duplicate-name rules, or
@@ -100,6 +104,10 @@ deduplicate folded members. `BaseDefinitions()` and `Extensions()` preserve raw
 parsed metadata separately; `TypeNames()` returns indexed type names in
 first-seen document order; and object, interface, input, enum, union, and scalar
 helper accessors return base metadata followed by matching extension metadata.
+`LookupQueryRoot()`, `LookupMutationRoot()`, and `LookupSubscriptionRoot()`
+resolve explicit schema root operation declarations through indexed type
+entries; query lookup falls back to `Query` when no explicit query root is
+declared.
 
 ### Parse a single value or type literal
 
