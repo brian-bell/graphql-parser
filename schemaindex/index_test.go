@@ -362,6 +362,7 @@ func TestTypeEntryScalarDirectivesFoldBaseAndExtensions(t *testing.T) {
 		directive @tag(name: String) on SCALAR
 		directive @specifiedBy(url: String!) on SCALAR
 
+		extend scalar URL @tag(name: "before-base")
 		scalar URL @specifiedBy(url: "https://example.com/url")
 		extend scalar URL @tag(name: "first")
 		scalar DateTime
@@ -375,7 +376,9 @@ func TestTypeEntryScalarDirectivesFoldBaseAndExtensions(t *testing.T) {
 	if url == nil {
 		t.Fatal(`LookupType("URL") = nil`)
 	}
-	assertDirectiveNames(t, url.ScalarDirectives(), "specifiedBy", "tag", "tag", "tag")
+	urlDirectives := url.ScalarDirectives()
+	assertDirectiveNames(t, urlDirectives, "specifiedBy", "tag", "tag", "tag", "tag")
+	assertDirectiveStringArgValues(t, urlDirectives[1:], "name", "before-base", "first", "second", "second-duplicate")
 
 	dateTime := idx.LookupType("DateTime")
 	if dateTime == nil {
@@ -589,6 +592,18 @@ func TestNewNilDocumentIsEmpty(t *testing.T) {
 	assertTypeNames(t, idx.TypeNames())
 }
 
+func TestTypeEntryFoldedAccessorsReturnEmptyForUnmatchedKinds(t *testing.T) {
+	doc := mustParseSchema(t, `type Query { id: ID }`)
+	entry := schemaindex.New(doc).LookupType("Query")
+	if entry == nil {
+		t.Fatal(`LookupType("Query") = nil`)
+	}
+
+	assertEnumValueNames(t, entry.EnumValues())
+	assertNamedTypeNames(t, entry.UnionMembers())
+	assertDirectiveNames(t, entry.ScalarDirectives())
+}
+
 func TestEntryDefinitionSlicesAreCopies(t *testing.T) {
 	doc := mustParseSchema(t, `
 		type Query { name: String }
@@ -800,6 +815,26 @@ func assertDirectiveNames(t *testing.T, directives ast.DirectiveList, names ...s
 	for i, name := range names {
 		if directives[i].Name != name {
 			t.Fatalf("directive[%d].Name = %q; want %q", i, directives[i].Name, name)
+		}
+	}
+}
+
+func assertDirectiveStringArgValues(t *testing.T, directives ast.DirectiveList, argName string, values ...string) {
+	t.Helper()
+	if got := len(directives); got != len(values) {
+		t.Fatalf("directive count = %d; want %d", got, len(values))
+	}
+	for i, value := range values {
+		arg := directives[i].Arguments.ForName(argName)
+		if arg == nil {
+			t.Fatalf("directive[%d] argument %q = nil; want %q", i, argName, value)
+		}
+		stringValue, ok := arg.Value.(*ast.StringValue)
+		if !ok || stringValue == nil {
+			t.Fatalf("directive[%d] argument %q value = %T; want *ast.StringValue", i, argName, arg.Value)
+		}
+		if stringValue.Value != value {
+			t.Fatalf("directive[%d] argument %q value = %q; want %q", i, argName, stringValue.Value, value)
 		}
 	}
 }

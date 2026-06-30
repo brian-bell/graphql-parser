@@ -78,6 +78,7 @@ import (
 schemaDoc, err := parser.ParseSchema(`
     type Query { user: User }
     extend type Query { viewer: User }
+    enum Status { ACTIVE }
     extend enum Status { ARCHIVED }
 `)
 if err != nil { panic(err) }
@@ -88,8 +89,10 @@ query := idx.LookupType("Query")
 base := query.BaseDefinitions()[0].(*ast.ObjectTypeDefinition)
 ext := query.Extensions()[0].(*ast.ObjectTypeExtension)
 fields := query.ObjectFields()
+status := idx.LookupType("Status")
+values := status.EnumValues()
 
-fmt.Println(names[0], base.Name, ext.Fields[0].Name, fields[1].Name)
+fmt.Println(names[0], base.Name, ext.Fields[0].Name, fields[1].Name, values[1].Name)
 ```
 
 The index does not validate schema semantics, enforce duplicate-name rules, or
