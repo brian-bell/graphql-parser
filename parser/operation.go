@@ -7,11 +7,10 @@ import (
 
 // parseShorthandOperation parses a bare "{ ... }" as an anonymous query.
 func (p *parser) parseShorthandOperation() (*ast.OperationDefinition, error) {
-	tok, err := p.peek()
+	scope, err := p.enter()
 	if err != nil {
 		return nil, err
 	}
-	start := tok.Start
 	set, err := p.parseSelectionSet()
 	if err != nil {
 		return nil, err
@@ -19,7 +18,7 @@ func (p *parser) parseShorthandOperation() (*ast.OperationDefinition, error) {
 	return &ast.OperationDefinition{
 		Operation:    ast.OperationQuery,
 		SelectionSet: set,
-		Loc:          p.loc(start),
+		Loc:          scope.close(),
 	}, nil
 }
 
@@ -30,6 +29,7 @@ func (p *parser) parseOperationDefinition() (*ast.OperationDefinition, error) {
 	if err != nil {
 		return nil, err
 	}
+	scope := p.scopeAt(keyword.Start)
 	op := ast.OperationType(keyword.Value)
 
 	def := &ast.OperationDefinition{Operation: op}
@@ -67,7 +67,7 @@ func (p *parser) parseOperationDefinition() (*ast.OperationDefinition, error) {
 		return nil, err
 	}
 	def.SelectionSet = set
-	def.Loc = p.loc(keyword.Start)
+	def.Loc = scope.close()
 	return def, nil
 }
 
@@ -78,6 +78,7 @@ func (p *parser) parseFragmentDefinition() (*ast.FragmentDefinition, error) {
 	if err != nil {
 		return nil, err
 	}
+	scope := p.scopeAt(keyword.Start)
 	name, err := p.parseFragmentName()
 	if err != nil {
 		return nil, err
@@ -102,7 +103,7 @@ func (p *parser) parseFragmentDefinition() (*ast.FragmentDefinition, error) {
 		TypeCondition: cond,
 		Directives:    dirs,
 		SelectionSet:  set,
-		Loc:           p.loc(keyword.Start),
+		Loc:           scope.close(),
 	}, nil
 }
 
@@ -129,7 +130,7 @@ func (p *parser) parseNamedType() (*ast.NamedType, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &ast.NamedType{Name: name.Value, Loc: p.loc(name.Start)}, nil
+	return &ast.NamedType{Name: name.Value, Loc: p.scopeAt(name.Start).close()}, nil
 }
 
 func (p *parser) parseVariableDefinitions() (ast.VariableDefinitionList, error) {
@@ -167,6 +168,7 @@ func (p *parser) parseVariableDefinition() (*ast.VariableDefinition, error) {
 	if err != nil {
 		return nil, err
 	}
+	scope := p.scopeAt(dollar.Start)
 	v, err := p.parseVariable()
 	if err != nil {
 		return nil, err
@@ -193,7 +195,7 @@ func (p *parser) parseVariableDefinition() (*ast.VariableDefinition, error) {
 		return nil, err
 	}
 	def.Directives = dirs
-	def.Loc = p.loc(dollar.Start)
+	def.Loc = scope.close()
 	return def, nil
 }
 
@@ -223,6 +225,7 @@ func (p *parser) parseDirective(isConst bool) (*ast.Directive, error) {
 	if err != nil {
 		return nil, err
 	}
+	scope := p.scopeAt(at.Start)
 	name, err := p.expect(lexer.NAME)
 	if err != nil {
 		return nil, err
@@ -234,7 +237,7 @@ func (p *parser) parseDirective(isConst bool) (*ast.Directive, error) {
 	return &ast.Directive{
 		Name:      name.Value,
 		Arguments: args,
-		Loc:       p.loc(at.Start),
+		Loc:       scope.close(),
 	}, nil
 }
 
@@ -278,6 +281,7 @@ func (p *parser) parseArgument(isConst bool) (*ast.Argument, error) {
 	if err != nil {
 		return nil, err
 	}
+	scope := p.scopeAt(name.Start)
 	if _, err := p.expect(lexer.COLON); err != nil {
 		return nil, err
 	}
@@ -288,6 +292,6 @@ func (p *parser) parseArgument(isConst bool) (*ast.Argument, error) {
 	return &ast.Argument{
 		Name:  name.Value,
 		Value: v,
-		Loc:   p.loc(name.Start),
+		Loc:   scope.close(),
 	}, nil
 }

@@ -22,8 +22,8 @@ func (p *parser) parseTypeReference() (ast.Type, error) {
 	var inner ast.Type
 	switch tok.Kind {
 	case lexer.LBRACKET:
-		open, err := p.advance()
-		if err != nil {
+		scope := p.scopeAt(tok.Start)
+		if _, err := p.advance(); err != nil {
 			return nil, err
 		}
 		of, err := p.parseTypeReference()
@@ -33,13 +33,14 @@ func (p *parser) parseTypeReference() (ast.Type, error) {
 		if _, err := p.expect(lexer.RBRACKET); err != nil {
 			return nil, err
 		}
-		inner = &ast.ListType{OfType: of, Loc: p.loc(open.Start)}
+		inner = &ast.ListType{OfType: of, Loc: scope.close()}
 	case lexer.NAME:
+		scope := p.scopeAt(tok.Start)
 		name, err := p.advance()
 		if err != nil {
 			return nil, err
 		}
-		inner = &ast.NamedType{Name: name.Value, Loc: p.loc(name.Start)}
+		inner = &ast.NamedType{Name: name.Value, Loc: scope.close()}
 	default:
 		return nil, p.errAtTok(tok, "Expected type, found "+describeToken(tok)+".")
 	}
@@ -49,7 +50,7 @@ func (p *parser) parseTypeReference() (ast.Type, error) {
 		return nil, err
 	}
 	if ok {
-		return &ast.NonNullType{OfType: inner, Loc: p.loc(inner.GetLoc().Start)}, nil
+		return &ast.NonNullType{OfType: inner, Loc: p.scopeAt(inner.GetLoc().Start).close()}, nil
 	}
 	return inner, nil
 }

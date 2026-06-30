@@ -39,7 +39,7 @@ func (p *parser) parseTypeSystemDefinitionOrExtension() (ast.Definition, bool, e
 		desc = &ast.StringValue{
 			Value: strTok.Value,
 			Block: strTok.Block,
-			Loc:   p.loc(strTok.Start),
+			Loc:   p.scopeAt(strTok.Start).close(),
 		}
 		tok, err = p.peek()
 		if err != nil {
@@ -110,7 +110,7 @@ func (p *parser) parseSchemaDefinition(desc *ast.StringValue, descStart int) (as
 		Description:    desc,
 		Directives:     dirs,
 		OperationTypes: ots,
-		Loc:            p.loc(definitionStart(descStart, kw.Start, desc != nil)),
+		Loc:            p.scopeAt(definitionStart(descStart, kw.Start, desc != nil)).close(),
 	}, true, nil
 }
 
@@ -162,7 +162,7 @@ func (p *parser) parseOperationTypeDefinition() (*ast.OperationTypeDefinition, e
 	return &ast.OperationTypeDefinition{
 		Operation: ast.OperationType(op.Value),
 		Type:      t,
-		Loc:       p.loc(op.Start),
+		Loc:       p.scopeAt(op.Start).close(),
 	}, nil
 }
 
@@ -183,7 +183,7 @@ func (p *parser) parseScalarTypeDefinition(desc *ast.StringValue, descStart int)
 		Description: desc,
 		Name:        name.Value,
 		Directives:  dirs,
-		Loc:         p.loc(definitionStart(descStart, kw.Start, desc != nil)),
+		Loc:         p.scopeAt(definitionStart(descStart, kw.Start, desc != nil)).close(),
 	}, true, nil
 }
 
@@ -214,7 +214,7 @@ func (p *parser) parseObjectTypeDefinition(desc *ast.StringValue, descStart int)
 		Interfaces:  ifaces,
 		Directives:  dirs,
 		Fields:      fields,
-		Loc:         p.loc(definitionStart(descStart, kw.Start, desc != nil)),
+		Loc:         p.scopeAt(definitionStart(descStart, kw.Start, desc != nil)).close(),
 	}, true, nil
 }
 
@@ -245,7 +245,7 @@ func (p *parser) parseInterfaceTypeDefinition(desc *ast.StringValue, descStart i
 		Interfaces:  ifaces,
 		Directives:  dirs,
 		Fields:      fields,
-		Loc:         p.loc(definitionStart(descStart, kw.Start, desc != nil)),
+		Loc:         p.scopeAt(definitionStart(descStart, kw.Start, desc != nil)).close(),
 	}, true, nil
 }
 
@@ -349,7 +349,7 @@ func (p *parser) parseFieldDefinition() (*ast.FieldDefinition, error) {
 		Arguments:   args,
 		Type:        t,
 		Directives:  dirs,
-		Loc:         p.loc(start),
+		Loc:         p.scopeAt(start).close(),
 	}
 	p.bindLeading(fd, leading)
 	return fd, nil
@@ -431,7 +431,7 @@ func (p *parser) parseInputValueDefinition() (*ast.InputValueDefinition, error) 
 		Type:         t,
 		DefaultValue: def,
 		Directives:   dirs,
-		Loc:          p.loc(start),
+		Loc:          p.scopeAt(start).close(),
 	}
 	p.bindLeading(iv, leading)
 	return iv, nil
@@ -459,7 +459,7 @@ func (p *parser) parseUnionTypeDefinition(desc *ast.StringValue, descStart int) 
 		Name:        name.Value,
 		Directives:  dirs,
 		Members:     members,
-		Loc:         p.loc(definitionStart(descStart, kw.Start, desc != nil)),
+		Loc:         p.scopeAt(definitionStart(descStart, kw.Start, desc != nil)).close(),
 	}, true, nil
 }
 
@@ -512,7 +512,7 @@ func (p *parser) parseEnumTypeDefinition(desc *ast.StringValue, descStart int) (
 		Name:        name.Value,
 		Directives:  dirs,
 		Values:      values,
-		Loc:         p.loc(definitionStart(descStart, kw.Start, desc != nil)),
+		Loc:         p.scopeAt(definitionStart(descStart, kw.Start, desc != nil)).close(),
 	}, true, nil
 }
 
@@ -577,7 +577,7 @@ func (p *parser) parseEnumValueDefinition() (*ast.EnumValueDefinition, error) {
 		Description: desc,
 		Name:        name.Value,
 		Directives:  dirs,
-		Loc:         p.loc(start),
+		Loc:         p.scopeAt(start).close(),
 	}
 	p.bindLeading(ev, leading)
 	return ev, nil
@@ -605,7 +605,7 @@ func (p *parser) parseInputObjectTypeDefinition(desc *ast.StringValue, descStart
 		Name:        name.Value,
 		Directives:  dirs,
 		Fields:      fields,
-		Loc:         p.loc(definitionStart(descStart, kw.Start, desc != nil)),
+		Loc:         p.scopeAt(definitionStart(descStart, kw.Start, desc != nil)).close(),
 	}, true, nil
 }
 
@@ -677,7 +677,7 @@ func (p *parser) parseDirectiveDefinition(desc *ast.StringValue, descStart int) 
 		Arguments:   args,
 		Repeatable:  repeatable,
 		Locations:   locs,
-		Loc:         p.loc(definitionStart(descStart, kw.Start, desc != nil)),
+		Loc:         p.scopeAt(definitionStart(descStart, kw.Start, desc != nil)).close(),
 	}, true, nil
 }
 
@@ -724,7 +724,7 @@ func (p *parser) parseOptionalDescription() (*ast.StringValue, int, error) {
 	return &ast.StringValue{
 		Value: str.Value,
 		Block: str.Block,
-		Loc:   p.loc(str.Start),
+		Loc:   p.scopeAt(str.Start).close(),
 	}, str.Start, nil
 }
 
@@ -784,7 +784,7 @@ func (p *parser) parseSchemaExtension(start int) (ast.Definition, bool, error) {
 	return &ast.SchemaExtension{
 		Directives:     dirs,
 		OperationTypes: ots,
-		Loc:            p.loc(start),
+		Loc:            p.scopeAt(start).close(),
 	}, true, nil
 }
 
@@ -806,7 +806,7 @@ func (p *parser) parseScalarTypeExtension(start int) (ast.Definition, bool, erro
 	return &ast.ScalarTypeExtension{
 		Name:       name.Value,
 		Directives: dirs,
-		Loc:        p.loc(start),
+		Loc:        p.scopeAt(start).close(),
 	}, true, nil
 }
 
@@ -838,7 +838,7 @@ func (p *parser) parseObjectTypeExtension(start int) (ast.Definition, bool, erro
 		Interfaces: ifaces,
 		Directives: dirs,
 		Fields:     fields,
-		Loc:        p.loc(start),
+		Loc:        p.scopeAt(start).close(),
 	}, true, nil
 }
 
@@ -870,7 +870,7 @@ func (p *parser) parseInterfaceTypeExtension(start int) (ast.Definition, bool, e
 		Interfaces: ifaces,
 		Directives: dirs,
 		Fields:     fields,
-		Loc:        p.loc(start),
+		Loc:        p.scopeAt(start).close(),
 	}, true, nil
 }
 
@@ -897,7 +897,7 @@ func (p *parser) parseUnionTypeExtension(start int) (ast.Definition, bool, error
 		Name:       name.Value,
 		Directives: dirs,
 		Members:    members,
-		Loc:        p.loc(start),
+		Loc:        p.scopeAt(start).close(),
 	}, true, nil
 }
 
@@ -924,7 +924,7 @@ func (p *parser) parseEnumTypeExtension(start int) (ast.Definition, bool, error)
 		Name:       name.Value,
 		Directives: dirs,
 		Values:     values,
-		Loc:        p.loc(start),
+		Loc:        p.scopeAt(start).close(),
 	}, true, nil
 }
 
@@ -951,6 +951,6 @@ func (p *parser) parseInputObjectTypeExtension(start int) (ast.Definition, bool,
 		Name:       name.Value,
 		Directives: dirs,
 		Fields:     fields,
-		Loc:        p.loc(start),
+		Loc:        p.scopeAt(start).close(),
 	}, true, nil
 }

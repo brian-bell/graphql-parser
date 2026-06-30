@@ -8,11 +8,10 @@ import (
 // parseDocument consumes the full source and returns a Document containing
 // one or more Definitions. Empty input is an error per spec.
 func (p *parser) parseDocument() (*ast.Document, error) {
-	first, err := p.peek()
+	scope, err := p.enter()
 	if err != nil {
 		return nil, err
 	}
-	start := first.Start
 	var defs ast.DefinitionList
 	for {
 		tok, err := p.peek()
@@ -38,18 +37,18 @@ func (p *parser) parseDocument() (*ast.Document, error) {
 			}
 			se, _ := err.(*ast.SyntaxError)
 			p.skipToDefinitionStart()
-			defs = append(defs, &ast.BadDefinition{Err: se, Loc: p.loc(defStart)})
+			defs = append(defs, &ast.BadDefinition{Err: se, Loc: p.scopeAt(defStart).close()})
 			continue
 		}
 		p.bindLeading(def, defLeading)
 		defs = append(defs, def)
 	}
 	if len(defs) == 0 {
-		return nil, p.errAtTok(first, "Expected at least one definition.")
+		return nil, p.errAtTok(lexer.Token{Start: scope.start}, "Expected at least one definition.")
 	}
 	return &ast.Document{
 		Definitions: defs,
-		Loc:         &ast.Loc{Start: start, End: p.lastEnd, Source: p.source},
+		Loc:         scope.close(),
 	}, nil
 }
 
