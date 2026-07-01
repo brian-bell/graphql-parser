@@ -58,6 +58,9 @@ func (p *Parser) parseSource(src *ast.Source) (*ast.Document, *parser, error) {
 	if err != nil {
 		if internal.cfg.recovery {
 			_ = internal.recordError(err)
+			if doc == nil {
+				internal.skipToEOF()
+			}
 		} else {
 			return nil, internal, err
 		}

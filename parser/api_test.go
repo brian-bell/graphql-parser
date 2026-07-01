@@ -471,6 +471,69 @@ func TestParserValueAndTypeRecoveryTreatsNestedFailureAsRootFailure(t *testing.T
 	})
 }
 
+func TestParserValueAndTypeRecoveryConsumesLexerErrors(t *testing.T) {
+	p := parser.New(parser.WithRecovery())
+
+	valueBodies := []string{"?", "01", "-", "\"unterminated"}
+	for _, body := range valueBodies {
+		t.Run("value/"+body, func(t *testing.T) {
+			src := &ast.Source{Body: body, Name: "value-lexer-error.graphql"}
+			v, err := p.ParseValue(src)
+			assertParseErrors(t, err, 1)
+			bad, ok := v.(*ast.BadValue)
+			if !ok {
+				t.Fatalf("value = %T; want *ast.BadValue", v)
+			}
+			assertBadLoc(t, bad.Err, bad.Loc, src, 0, len(src.Body))
+		})
+
+		t.Run("const value/"+body, func(t *testing.T) {
+			src := &ast.Source{Body: body, Name: "const-value-lexer-error.graphql"}
+			v, err := p.ParseConstValue(src)
+			assertParseErrors(t, err, 1)
+			bad, ok := v.(*ast.BadValue)
+			if !ok {
+				t.Fatalf("const value = %T; want *ast.BadValue", v)
+			}
+			assertBadLoc(t, bad.Err, bad.Loc, src, 0, len(src.Body))
+		})
+	}
+
+	typeBodies := []string{"?", "01", "-", "\"unterminated"}
+	for _, body := range typeBodies {
+		t.Run("type/"+body, func(t *testing.T) {
+			src := &ast.Source{Body: body, Name: "type-lexer-error.graphql"}
+			typ, err := p.ParseType(src)
+			assertParseErrors(t, err, 1)
+			bad, ok := typ.(*ast.BadType)
+			if !ok {
+				t.Fatalf("type = %T; want *ast.BadType", typ)
+			}
+			assertBadLoc(t, bad.Err, bad.Loc, src, 0, len(src.Body))
+		})
+	}
+}
+
+func TestDocumentRecoveryConsumesInitialLexerErrorsOnce(t *testing.T) {
+	p := parser.New(parser.WithRecovery())
+
+	t.Run("document", func(t *testing.T) {
+		doc, err := p.Parse(&ast.Source{Body: "?", Name: "doc-lexer-error.graphql"})
+		if doc != nil {
+			t.Fatalf("document = %T; want nil", doc)
+		}
+		assertParseErrors(t, err, 1)
+	})
+
+	t.Run("schema", func(t *testing.T) {
+		doc, err := p.ParseSchema(&ast.Source{Body: "?", Name: "schema-lexer-error.graphql"})
+		if doc != nil {
+			t.Fatalf("schema document = %T; want nil", doc)
+		}
+		assertParseErrors(t, err, 1)
+	})
+}
+
 func assertLocSource(t *testing.T, loc *ast.Loc, src *ast.Source) {
 	t.Helper()
 	if loc == nil {
