@@ -6,8 +6,9 @@ type NamedType struct {
 	Loc  *Loc
 }
 
-func (t *NamedType) GetLoc() *Loc { return t.Loc }
-func (*NamedType) isType()        {}
+func (t *NamedType) GetLoc() *Loc   { return t.Loc }
+func (*NamedType) Children() []Node { return nil }
+func (*NamedType) isType()          {}
 
 // ListType is a [T] type. OfType is the inner type, which may itself be any
 // Type (NamedType, ListType, or NonNullType).
@@ -17,7 +18,13 @@ type ListType struct {
 }
 
 func (t *ListType) GetLoc() *Loc { return t.Loc }
-func (*ListType) isType()        {}
+func (t *ListType) Children() []Node {
+	if t.OfType == nil {
+		return nil
+	}
+	return []Node{t.OfType}
+}
+func (*ListType) isType() {}
 
 // NonNullType is a T! type. Per spec, OfType must be a NamedType or ListType,
 // not another NonNullType — the parser enforces this.
@@ -27,7 +34,13 @@ type NonNullType struct {
 }
 
 func (t *NonNullType) GetLoc() *Loc { return t.Loc }
-func (*NonNullType) isType()        {}
+func (t *NonNullType) Children() []Node {
+	if t.OfType == nil {
+		return nil
+	}
+	return []Node{t.OfType}
+}
+func (*NonNullType) isType() {}
 
 // TypeString returns the canonical type-reference spelling for t, or "" when
 // t is nil, a BadType, or a malformed type reference.

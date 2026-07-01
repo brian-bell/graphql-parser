@@ -38,6 +38,29 @@ func TestWalk_VisitsRoot(t *testing.T) {
 	}
 }
 
+type customNode struct {
+	children []ast.Node
+}
+
+func (*customNode) GetLoc() *ast.Loc { return nil }
+
+func (n *customNode) Children() []ast.Node { return n.children }
+
+func TestWalk_DescendsIntoCustomNodeChildren(t *testing.T) {
+	child := &ast.IntValue{Value: "1"}
+	root := &customNode{children: []ast.Node{child}}
+
+	r := &recordVisitor{}
+	ast.Walk(r, root)
+
+	if len(r.visited) != 2 {
+		t.Fatalf("visited %d nodes; want root and child", len(r.visited))
+	}
+	if r.visited[0] != root || r.visited[1] != child {
+		t.Fatalf("visited %#v; want root then child", r.visited)
+	}
+}
+
 func TestWalk_StopOnNil(t *testing.T) {
 	doc, err := parser.Parse("{ x { y } }")
 	if err != nil {

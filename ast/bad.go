@@ -8,8 +8,9 @@ type BadValue struct {
 	Loc *Loc
 }
 
-func (v *BadValue) GetLoc() *Loc { return v.Loc }
-func (*BadValue) isValue()       {}
+func (v *BadValue) GetLoc() *Loc   { return v.Loc }
+func (*BadValue) Children() []Node { return nil }
+func (*BadValue) isValue()         {}
 
 // BadType is a placeholder Type for recovery.
 type BadType struct {
@@ -17,8 +18,9 @@ type BadType struct {
 	Loc *Loc
 }
 
-func (t *BadType) GetLoc() *Loc { return t.Loc }
-func (*BadType) isType()        {}
+func (t *BadType) GetLoc() *Loc   { return t.Loc }
+func (*BadType) Children() []Node { return nil }
+func (*BadType) isType()          {}
 
 // BadField is a placeholder Selection for recovery — used when a selection
 // inside a SelectionSet failed to parse.
@@ -27,8 +29,9 @@ type BadField struct {
 	Loc *Loc
 }
 
-func (f *BadField) GetLoc() *Loc { return f.Loc }
-func (*BadField) isSelection()   {}
+func (f *BadField) GetLoc() *Loc   { return f.Loc }
+func (*BadField) Children() []Node { return nil }
+func (*BadField) isSelection()     {}
 
 // BadDefinition is a placeholder top-level Definition for recovery.
 type BadDefinition struct {
@@ -36,5 +39,6 @@ type BadDefinition struct {
 	Loc *Loc
 }
 
-func (d *BadDefinition) GetLoc() *Loc { return d.Loc }
-func (*BadDefinition) isDefinition()  {}
+func (d *BadDefinition) GetLoc() *Loc   { return d.Loc }
+func (*BadDefinition) Children() []Node { return nil }
+func (*BadDefinition) isDefinition()    {}

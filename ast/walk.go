@@ -8,6 +8,10 @@ type Visitor interface {
 	Visit(node Node) Visitor
 }
 
+type childWalker interface {
+	walkChildren(Visitor)
+}
+
 // Walk performs a depth-first, source-order traversal of node and its
 // children. It does not visit Comments or descend into BadValue/BadType/
 // BadField/BadDefinition placeholder nodes — they are leaves for traversal
@@ -20,289 +24,109 @@ func Walk(v Visitor, node Node) {
 	if v == nil {
 		return
 	}
-	switch n := node.(type) {
-	// Document and executable definitions
-	case *Document:
-		for _, def := range n.Definitions {
-			Walk(v, def)
-		}
-	case *OperationDefinition:
-		for _, vd := range n.VariableDefinitions {
-			Walk(v, vd)
-		}
-		for _, d := range n.Directives {
-			Walk(v, d)
-		}
-		if n.SelectionSet != nil {
-			Walk(v, n.SelectionSet)
-		}
-	case *FragmentDefinition:
-		if n.TypeCondition != nil {
-			Walk(v, n.TypeCondition)
-		}
-		for _, d := range n.Directives {
-			Walk(v, d)
-		}
-		if n.SelectionSet != nil {
-			Walk(v, n.SelectionSet)
-		}
-	case *VariableDefinition:
-		if n.Variable != nil {
-			Walk(v, n.Variable)
-		}
-		if n.Type != nil {
-			Walk(v, n.Type)
-		}
-		if n.DefaultValue != nil {
-			Walk(v, n.DefaultValue)
-		}
-		for _, d := range n.Directives {
-			Walk(v, d)
-		}
-	case *SelectionSet:
-		for _, s := range n.Selections {
-			Walk(v, s)
-		}
-	case *Field:
-		for _, a := range n.Arguments {
-			Walk(v, a)
-		}
-		for _, d := range n.Directives {
-			Walk(v, d)
-		}
-		if n.SelectionSet != nil {
-			Walk(v, n.SelectionSet)
-		}
-	case *FragmentSpread:
-		for _, d := range n.Directives {
-			Walk(v, d)
-		}
-	case *InlineFragment:
-		if n.TypeCondition != nil {
-			Walk(v, n.TypeCondition)
-		}
-		for _, d := range n.Directives {
-			Walk(v, d)
-		}
-		if n.SelectionSet != nil {
-			Walk(v, n.SelectionSet)
-		}
-	case *Argument:
-		if n.Value != nil {
-			Walk(v, n.Value)
-		}
-	case *Directive:
-		for _, a := range n.Arguments {
-			Walk(v, a)
-		}
+	if walker, ok := node.(childWalker); ok {
+		walker.walkChildren(v)
+		return
+	}
+	for _, child := range node.Children() {
+		Walk(v, child)
+	}
+}
 
-	// Values
-	case *ListValue:
-		for _, val := range n.Values {
-			Walk(v, val)
-		}
-	case *ObjectValue:
-		for _, f := range n.Fields {
-			Walk(v, f)
-		}
-	case *ObjectField:
-		if n.Value != nil {
-			Walk(v, n.Value)
-		}
+func walkNode(v Visitor, child Node) {
+	if child != nil {
+		Walk(v, child)
+	}
+}
 
-	// Types
-	case *ListType:
-		if n.OfType != nil {
-			Walk(v, n.OfType)
-		}
-	case *NonNullType:
-		if n.OfType != nil {
-			Walk(v, n.OfType)
-		}
+func walkDefinitions(v Visitor, children DefinitionList) {
+	for _, child := range children {
+		walkNode(v, child)
+	}
+}
 
-	// Type-system definitions
-	case *SchemaDefinition:
-		if n.Description != nil {
-			Walk(v, n.Description)
-		}
-		for _, d := range n.Directives {
-			Walk(v, d)
-		}
-		for _, ot := range n.OperationTypes {
-			Walk(v, ot)
-		}
-	case *SchemaExtension:
-		for _, d := range n.Directives {
-			Walk(v, d)
-		}
-		for _, ot := range n.OperationTypes {
-			Walk(v, ot)
-		}
-	case *OperationTypeDefinition:
-		if n.Type != nil {
-			Walk(v, n.Type)
-		}
-
-	case *ScalarTypeDefinition:
-		if n.Description != nil {
-			Walk(v, n.Description)
-		}
-		for _, d := range n.Directives {
-			Walk(v, d)
-		}
-	case *ScalarTypeExtension:
-		for _, d := range n.Directives {
-			Walk(v, d)
-		}
-
-	case *ObjectTypeDefinition:
-		if n.Description != nil {
-			Walk(v, n.Description)
-		}
-		for _, i := range n.Interfaces {
-			Walk(v, i)
-		}
-		for _, d := range n.Directives {
-			Walk(v, d)
-		}
-		for _, f := range n.Fields {
-			Walk(v, f)
-		}
-	case *ObjectTypeExtension:
-		for _, i := range n.Interfaces {
-			Walk(v, i)
-		}
-		for _, d := range n.Directives {
-			Walk(v, d)
-		}
-		for _, f := range n.Fields {
-			Walk(v, f)
-		}
-
-	case *InterfaceTypeDefinition:
-		if n.Description != nil {
-			Walk(v, n.Description)
-		}
-		for _, i := range n.Interfaces {
-			Walk(v, i)
-		}
-		for _, d := range n.Directives {
-			Walk(v, d)
-		}
-		for _, f := range n.Fields {
-			Walk(v, f)
-		}
-	case *InterfaceTypeExtension:
-		for _, i := range n.Interfaces {
-			Walk(v, i)
-		}
-		for _, d := range n.Directives {
-			Walk(v, d)
-		}
-		for _, f := range n.Fields {
-			Walk(v, f)
-		}
-
-	case *UnionTypeDefinition:
-		if n.Description != nil {
-			Walk(v, n.Description)
-		}
-		for _, d := range n.Directives {
-			Walk(v, d)
-		}
-		for _, m := range n.Members {
-			Walk(v, m)
-		}
-	case *UnionTypeExtension:
-		for _, d := range n.Directives {
-			Walk(v, d)
-		}
-		for _, m := range n.Members {
-			Walk(v, m)
-		}
-
-	case *EnumTypeDefinition:
-		if n.Description != nil {
-			Walk(v, n.Description)
-		}
-		for _, d := range n.Directives {
-			Walk(v, d)
-		}
-		for _, ev := range n.Values {
-			Walk(v, ev)
-		}
-	case *EnumTypeExtension:
-		for _, d := range n.Directives {
-			Walk(v, d)
-		}
-		for _, ev := range n.Values {
-			Walk(v, ev)
-		}
-
-	case *InputObjectTypeDefinition:
-		if n.Description != nil {
-			Walk(v, n.Description)
-		}
-		for _, d := range n.Directives {
-			Walk(v, d)
-		}
-		for _, f := range n.Fields {
-			Walk(v, f)
-		}
-	case *InputObjectTypeExtension:
-		for _, d := range n.Directives {
-			Walk(v, d)
-		}
-		for _, f := range n.Fields {
-			Walk(v, f)
-		}
-
-	case *FieldDefinition:
-		if n.Description != nil {
-			Walk(v, n.Description)
-		}
-		for _, a := range n.Arguments {
-			Walk(v, a)
-		}
-		if n.Type != nil {
-			Walk(v, n.Type)
-		}
-		for _, d := range n.Directives {
-			Walk(v, d)
-		}
-	case *InputValueDefinition:
-		if n.Description != nil {
-			Walk(v, n.Description)
-		}
-		if n.Type != nil {
-			Walk(v, n.Type)
-		}
-		if n.DefaultValue != nil {
-			Walk(v, n.DefaultValue)
-		}
-		for _, d := range n.Directives {
-			Walk(v, d)
-		}
-	case *EnumValueDefinition:
-		if n.Description != nil {
-			Walk(v, n.Description)
-		}
-		for _, d := range n.Directives {
-			Walk(v, d)
-		}
-	case *DirectiveDefinition:
-		if n.Description != nil {
-			Walk(v, n.Description)
-		}
-		for _, a := range n.Arguments {
-			Walk(v, a)
+func walkVariableDefinitions(v Visitor, children VariableDefinitionList) {
+	for _, child := range children {
+		if child != nil {
+			Walk(v, child)
 		}
 	}
-	// Falling through with no case match is a no-op: leaf nodes
-	// (IntValue, FloatValue, StringValue, BooleanValue, NullValue,
-	// EnumValue, Variable, NamedType, Comment, Bad*) have no children,
-	// so simply visiting them and returning is correct. Any future node
-	// kind added without a case here defaults to the same behavior.
+}
+
+func walkSelections(v Visitor, children []Selection) {
+	for _, child := range children {
+		walkNode(v, child)
+	}
+}
+
+func walkArguments(v Visitor, children ArgumentList) {
+	for _, child := range children {
+		if child != nil {
+			Walk(v, child)
+		}
+	}
+}
+
+func walkDirectives(v Visitor, children DirectiveList) {
+	for _, child := range children {
+		if child != nil {
+			Walk(v, child)
+		}
+	}
+}
+
+func walkValues(v Visitor, children []Value) {
+	for _, child := range children {
+		walkNode(v, child)
+	}
+}
+
+func walkObjectFields(v Visitor, children []*ObjectField) {
+	for _, child := range children {
+		if child != nil {
+			Walk(v, child)
+		}
+	}
+}
+
+func walkNamedTypes(v Visitor, children []*NamedType) {
+	for _, child := range children {
+		if child != nil {
+			Walk(v, child)
+		}
+	}
+}
+
+func walkOperationTypes(v Visitor, children []*OperationTypeDefinition) {
+	for _, child := range children {
+		if child != nil {
+			Walk(v, child)
+		}
+	}
+}
+
+func walkFieldDefinitions(v Visitor, children FieldDefinitionList) {
+	for _, child := range children {
+		if child != nil {
+			Walk(v, child)
+		}
+	}
+}
+
+func walkInputValues(v Visitor, children InputValueList) {
+	for _, child := range children {
+		if child != nil {
+			Walk(v, child)
+		}
+	}
+}
+
+func walkEnumValues(v Visitor, children EnumValueList) {
+	for _, child := range children {
+		if child != nil {
+			Walk(v, child)
+		}
+	}
 }
 
 // inspector adapts a func(Node) bool to the Visitor interface for Inspect.

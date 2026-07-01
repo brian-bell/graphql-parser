@@ -10,6 +10,9 @@ type Comment struct {
 // GetLoc returns the comment's location.
 func (c *Comment) GetLoc() *Loc { return c.Loc }
 
+// Children returns nil because comments are traversal leaves.
+func (*Comment) Children() []Node { return nil }
+
 // CommentGroup attaches a node's leading and trailing comments. It is set on
 // AST nodes only when the parser is run with the WithComments option;
 // otherwise the field on each node is nil.

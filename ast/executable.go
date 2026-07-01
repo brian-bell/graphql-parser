@@ -25,7 +25,24 @@ type OperationDefinition struct {
 	Comments            *CommentGroup
 }
 
-func (d *OperationDefinition) GetLoc() *Loc                { return d.Loc }
+func (d *OperationDefinition) GetLoc() *Loc { return d.Loc }
+func (d *OperationDefinition) Children() []Node {
+	children := make([]Node, 0, len(d.VariableDefinitions)+len(d.Directives)+1)
+	for _, vd := range d.VariableDefinitions {
+		if vd != nil {
+			children = append(children, vd)
+		}
+	}
+	for _, dir := range d.Directives {
+		if dir != nil {
+			children = append(children, dir)
+		}
+	}
+	if d.SelectionSet != nil {
+		children = append(children, d.SelectionSet)
+	}
+	return children
+}
 func (*OperationDefinition) isDefinition()                 {}
 func (d *OperationDefinition) CommentSlot() **CommentGroup { return &d.Comments }
 
@@ -39,7 +56,22 @@ type FragmentDefinition struct {
 	Comments      *CommentGroup
 }
 
-func (d *FragmentDefinition) GetLoc() *Loc                { return d.Loc }
+func (d *FragmentDefinition) GetLoc() *Loc { return d.Loc }
+func (d *FragmentDefinition) Children() []Node {
+	children := make([]Node, 0, len(d.Directives)+2)
+	if d.TypeCondition != nil {
+		children = append(children, d.TypeCondition)
+	}
+	for _, dir := range d.Directives {
+		if dir != nil {
+			children = append(children, dir)
+		}
+	}
+	if d.SelectionSet != nil {
+		children = append(children, d.SelectionSet)
+	}
+	return children
+}
 func (*FragmentDefinition) isDefinition()                 {}
 func (d *FragmentDefinition) CommentSlot() **CommentGroup { return &d.Comments }
 
@@ -54,7 +86,25 @@ type VariableDefinition struct {
 	Comments     *CommentGroup
 }
 
-func (v *VariableDefinition) GetLoc() *Loc                { return v.Loc }
+func (v *VariableDefinition) GetLoc() *Loc { return v.Loc }
+func (v *VariableDefinition) Children() []Node {
+	children := make([]Node, 0, len(v.Directives)+3)
+	if v.Variable != nil {
+		children = append(children, v.Variable)
+	}
+	if v.Type != nil {
+		children = append(children, v.Type)
+	}
+	if v.DefaultValue != nil {
+		children = append(children, v.DefaultValue)
+	}
+	for _, dir := range v.Directives {
+		if dir != nil {
+			children = append(children, dir)
+		}
+	}
+	return children
+}
 func (v *VariableDefinition) CommentSlot() **CommentGroup { return &v.Comments }
 
 // SelectionSet is a "{ ... }" block of one or more Selections.
@@ -65,7 +115,16 @@ type SelectionSet struct {
 }
 
 // GetLoc returns the location covering the selection set including its braces.
-func (s *SelectionSet) GetLoc() *Loc                { return s.Loc }
+func (s *SelectionSet) GetLoc() *Loc { return s.Loc }
+func (s *SelectionSet) Children() []Node {
+	children := make([]Node, 0, len(s.Selections))
+	for _, sel := range s.Selections {
+		if sel != nil {
+			children = append(children, sel)
+		}
+	}
+	return children
+}
 func (s *SelectionSet) CommentSlot() **CommentGroup { return &s.Comments }
 
 // Field is a leaf or non-leaf selection: "[alias:] name(args)? @dir...?
@@ -80,7 +139,24 @@ type Field struct {
 	Comments     *CommentGroup
 }
 
-func (f *Field) GetLoc() *Loc                { return f.Loc }
+func (f *Field) GetLoc() *Loc { return f.Loc }
+func (f *Field) Children() []Node {
+	children := make([]Node, 0, len(f.Arguments)+len(f.Directives)+1)
+	for _, arg := range f.Arguments {
+		if arg != nil {
+			children = append(children, arg)
+		}
+	}
+	for _, dir := range f.Directives {
+		if dir != nil {
+			children = append(children, dir)
+		}
+	}
+	if f.SelectionSet != nil {
+		children = append(children, f.SelectionSet)
+	}
+	return children
+}
 func (*Field) isSelection()                  {}
 func (f *Field) CommentSlot() **CommentGroup { return &f.Comments }
 
@@ -93,7 +169,16 @@ type FragmentSpread struct {
 	Comments   *CommentGroup
 }
 
-func (s *FragmentSpread) GetLoc() *Loc                { return s.Loc }
+func (s *FragmentSpread) GetLoc() *Loc { return s.Loc }
+func (s *FragmentSpread) Children() []Node {
+	children := make([]Node, 0, len(s.Directives))
+	for _, dir := range s.Directives {
+		if dir != nil {
+			children = append(children, dir)
+		}
+	}
+	return children
+}
 func (*FragmentSpread) isSelection()                  {}
 func (s *FragmentSpread) CommentSlot() **CommentGroup { return &s.Comments }
 
@@ -108,7 +193,22 @@ type InlineFragment struct {
 	Comments      *CommentGroup
 }
 
-func (f *InlineFragment) GetLoc() *Loc                { return f.Loc }
+func (f *InlineFragment) GetLoc() *Loc { return f.Loc }
+func (f *InlineFragment) Children() []Node {
+	children := make([]Node, 0, len(f.Directives)+2)
+	if f.TypeCondition != nil {
+		children = append(children, f.TypeCondition)
+	}
+	for _, dir := range f.Directives {
+		if dir != nil {
+			children = append(children, dir)
+		}
+	}
+	if f.SelectionSet != nil {
+		children = append(children, f.SelectionSet)
+	}
+	return children
+}
 func (*InlineFragment) isSelection()                  {}
 func (f *InlineFragment) CommentSlot() **CommentGroup { return &f.Comments }
 
@@ -120,7 +220,13 @@ type Argument struct {
 	Comments *CommentGroup
 }
 
-func (a *Argument) GetLoc() *Loc                { return a.Loc }
+func (a *Argument) GetLoc() *Loc { return a.Loc }
+func (a *Argument) Children() []Node {
+	if a.Value == nil {
+		return nil
+	}
+	return []Node{a.Value}
+}
 func (a *Argument) CommentSlot() **CommentGroup { return &a.Comments }
 
 // Directive is "@name(args)?". Arguments must be const values when the
@@ -133,5 +239,14 @@ type Directive struct {
 	Comments  *CommentGroup
 }
 
-func (d *Directive) GetLoc() *Loc                { return d.Loc }
+func (d *Directive) GetLoc() *Loc { return d.Loc }
+func (d *Directive) Children() []Node {
+	children := make([]Node, 0, len(d.Arguments))
+	for _, arg := range d.Arguments {
+		if arg != nil {
+			children = append(children, arg)
+		}
+	}
+	return children
+}
 func (d *Directive) CommentSlot() **CommentGroup { return &d.Comments }

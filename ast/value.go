@@ -10,6 +10,7 @@ type IntValue struct {
 }
 
 func (v *IntValue) GetLoc() *Loc                { return v.Loc }
+func (*IntValue) Children() []Node              { return nil }
 func (*IntValue) isValue()                      {}
 func (v *IntValue) CommentSlot() **CommentGroup { return &v.Comments }
 
@@ -21,6 +22,7 @@ type FloatValue struct {
 }
 
 func (v *FloatValue) GetLoc() *Loc                { return v.Loc }
+func (*FloatValue) Children() []Node              { return nil }
 func (*FloatValue) isValue()                      {}
 func (v *FloatValue) CommentSlot() **CommentGroup { return &v.Comments }
 
@@ -36,6 +38,7 @@ type StringValue struct {
 }
 
 func (v *StringValue) GetLoc() *Loc                { return v.Loc }
+func (*StringValue) Children() []Node              { return nil }
 func (*StringValue) isValue()                      {}
 func (v *StringValue) CommentSlot() **CommentGroup { return &v.Comments }
 
@@ -47,6 +50,7 @@ type BooleanValue struct {
 }
 
 func (v *BooleanValue) GetLoc() *Loc                { return v.Loc }
+func (*BooleanValue) Children() []Node              { return nil }
 func (*BooleanValue) isValue()                      {}
 func (v *BooleanValue) CommentSlot() **CommentGroup { return &v.Comments }
 
@@ -57,6 +61,7 @@ type NullValue struct {
 }
 
 func (v *NullValue) GetLoc() *Loc                { return v.Loc }
+func (*NullValue) Children() []Node              { return nil }
 func (*NullValue) isValue()                      {}
 func (v *NullValue) CommentSlot() **CommentGroup { return &v.Comments }
 
@@ -68,6 +73,7 @@ type EnumValue struct {
 }
 
 func (v *EnumValue) GetLoc() *Loc                { return v.Loc }
+func (*EnumValue) Children() []Node              { return nil }
 func (*EnumValue) isValue()                      {}
 func (v *EnumValue) CommentSlot() **CommentGroup { return &v.Comments }
 
@@ -78,7 +84,16 @@ type ListValue struct {
 	Comments *CommentGroup
 }
 
-func (v *ListValue) GetLoc() *Loc                { return v.Loc }
+func (v *ListValue) GetLoc() *Loc { return v.Loc }
+func (v *ListValue) Children() []Node {
+	children := make([]Node, 0, len(v.Values))
+	for _, value := range v.Values {
+		if value != nil {
+			children = append(children, value)
+		}
+	}
+	return children
+}
 func (*ListValue) isValue()                      {}
 func (v *ListValue) CommentSlot() **CommentGroup { return &v.Comments }
 
@@ -89,7 +104,16 @@ type ObjectValue struct {
 	Comments *CommentGroup
 }
 
-func (v *ObjectValue) GetLoc() *Loc                { return v.Loc }
+func (v *ObjectValue) GetLoc() *Loc { return v.Loc }
+func (v *ObjectValue) Children() []Node {
+	children := make([]Node, 0, len(v.Fields))
+	for _, field := range v.Fields {
+		if field != nil {
+			children = append(children, field)
+		}
+	}
+	return children
+}
 func (*ObjectValue) isValue()                      {}
 func (v *ObjectValue) CommentSlot() **CommentGroup { return &v.Comments }
 
@@ -101,7 +125,13 @@ type ObjectField struct {
 	Comments *CommentGroup
 }
 
-func (f *ObjectField) GetLoc() *Loc                { return f.Loc }
+func (f *ObjectField) GetLoc() *Loc { return f.Loc }
+func (f *ObjectField) Children() []Node {
+	if f.Value == nil {
+		return nil
+	}
+	return []Node{f.Value}
+}
 func (f *ObjectField) CommentSlot() **CommentGroup { return &f.Comments }
 
 // Variable is a $name reference. It implements Value but the parser refuses
@@ -114,5 +144,6 @@ type Variable struct {
 }
 
 func (v *Variable) GetLoc() *Loc                { return v.Loc }
+func (*Variable) Children() []Node              { return nil }
 func (*Variable) isValue()                      {}
 func (v *Variable) CommentSlot() **CommentGroup { return &v.Comments }
