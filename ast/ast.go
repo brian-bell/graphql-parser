@@ -2,9 +2,11 @@ package ast
 
 // Node is the super-interface satisfied by every AST node. The location is
 // nullable: synthetic nodes constructed by tools (codegen, transforms) may
-// have a nil Loc.
+// have a nil Loc. Children returns the node's AST children in source order,
+// excluding nil children and comments.
 type Node interface {
 	GetLoc() *Loc
+	Children() []Node
 }
 
 // Definition is the union of all top-level definitions in a Document:

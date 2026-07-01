@@ -14,6 +14,17 @@ type Document struct {
 // GetLoc returns the document's location.
 func (d *Document) GetLoc() *Loc { return d.Loc }
 
+// Children returns the document definitions in source order.
+func (d *Document) Children() []Node {
+	children := make([]Node, 0, len(d.Definitions))
+	for _, def := range d.Definitions {
+		if def != nil {
+			children = append(children, def)
+		}
+	}
+	return children
+}
+
 // CommentSlot returns a pointer to the document's Comments field.
 func (d *Document) CommentSlot() **CommentGroup { return &d.Comments }
 
