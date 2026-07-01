@@ -61,6 +61,72 @@ func TestWalk_DescendsIntoCustomNodeChildren(t *testing.T) {
 	}
 }
 
+func TestWalk_MatchesRecursiveChildrenOrderForBuiltInNodes(t *testing.T) {
+	doc, err := parser.Parse(`
+		query Q($v: [Int!]! = [1]) @trace(arg: {nested: [true, null, ENUM]}) {
+			field(arg: {a: [1], v: $v}) {
+				...Frag
+				... on T @include(if: false) { id }
+			}
+		}
+		fragment Frag on T @frag { other }
+
+		"""schema desc"""
+		schema @schemaDir { query: Query mutation: Mutation subscription: Subscription }
+		"""scalar desc"""
+		scalar Date @scalar
+		"""object desc"""
+		type T implements I @obj {
+			"""field desc"""
+			f("""arg desc""" a: [Int!] = {k: [1]} @arg): String @field
+		}
+		"""interface desc"""
+		interface I implements J @iface { id: ID }
+		"""union desc"""
+		union U @union = T | Query
+		"""enum desc"""
+		enum E @enum { """A desc""" A @value }
+		"""input desc"""
+		input In @input { """in desc""" x: Int = 1 @inputField }
+		"""directive desc"""
+		directive @dir(arg: String = "x") repeatable on FIELD | QUERY
+		extend schema @ext { mutation: Mutation }
+		extend scalar Date @ext
+		extend type T implements J @ext { g: Int }
+		extend interface I implements J @ext { g: Int }
+		extend union U @ext = Other
+		extend enum E @ext { B }
+		extend input In @ext { y: Int }
+	`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	value, err := parser.ParseValue(`{a: [1, "hi", $v, ENUM, true, null], b: {nested: 1}}`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	typ, err := parser.ParseType("[[Int!]!]!")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		name string
+		root ast.Node
+	}{
+		{name: "document", root: doc},
+		{name: "value", root: value},
+		{name: "type", root: typ},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := collectViaWalk(tt.root)
+			want := collectViaChildren(tt.root)
+			assertSameNodes(t, got, want)
+		})
+	}
+}
+
 func TestWalk_StopOnNil(t *testing.T) {
 	doc, err := parser.Parse("{ x { y } }")
 	if err != nil {
@@ -188,6 +254,35 @@ func TestInspect_StopOnFalse(t *testing.T) {
 	})
 	if depth != 1 {
 		t.Errorf("expected to count exactly one Field; got %d", depth)
+	}
+}
+
+func collectViaWalk(root ast.Node) []ast.Node {
+	r := &recordVisitor{}
+	ast.Walk(r, root)
+	return r.visited
+}
+
+func collectViaChildren(root ast.Node) []ast.Node {
+	if root == nil {
+		return nil
+	}
+	nodes := []ast.Node{root}
+	for _, child := range root.Children() {
+		nodes = append(nodes, collectViaChildren(child)...)
+	}
+	return nodes
+}
+
+func assertSameNodes(t *testing.T, got, want []ast.Node) {
+	t.Helper()
+	if len(got) != len(want) {
+		t.Fatalf("visited %d nodes; want %d", len(got), len(want))
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("node[%d] = %T(%p); want %T(%p)", i, got[i], got[i], want[i], want[i])
+		}
 	}
 }
 

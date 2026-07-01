@@ -155,9 +155,15 @@ func TestChildren_OrderForNonLeafNodes(t *testing.T) {
 		SelectionSet:  selectionSet,
 	}
 	objectField := &ast.ObjectField{Name: "field", Value: defaultValue}
+	fieldArg := &ast.InputValueDefinition{
+		Description:  desc,
+		Type:         named,
+		DefaultValue: defaultValue,
+		Directives:   ast.DirectiveList{dir},
+	}
 	fieldDefinition := &ast.FieldDefinition{
 		Description: desc,
-		Arguments:   ast.InputValueList{},
+		Arguments:   ast.InputValueList{fieldArg},
 		Type:        named,
 		Directives:  ast.DirectiveList{dir},
 	}
@@ -328,7 +334,7 @@ func TestChildren_OrderForNonLeafNodes(t *testing.T) {
 		{
 			name: "FieldDefinition",
 			node: fieldDefinition,
-			want: []ast.Node{desc, named, dir},
+			want: []ast.Node{desc, fieldArg, named, dir},
 		},
 		{
 			name: "InputValueDefinition",
