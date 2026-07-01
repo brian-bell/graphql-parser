@@ -10,11 +10,13 @@ type config struct {
 	preserveComments bool
 }
 
-// WithRecovery enables error recovery: the parser collects multiple syntax
-// errors instead of aborting on the first, inserting Bad{Definition, Field,
-// Value, Type} placeholder nodes where it had to resynchronize. The returned
-// error is a [ParseErrors] aggregating every error found; the [ast.Document]
-// is still populated with whatever was parsed successfully.
+// WithRecovery enables error recovery: the parser collects syntax errors
+// instead of aborting on the first one, inserting Bad{Definition, Field, Value,
+// Type} placeholder nodes where it had to resynchronize. Document parsing can
+// return a partial [ast.Document]. Value and type entry points recover only at
+// the root entry: a malformed value/type input returns one BadValue or BadType
+// for the whole partial input rather than nested placeholders. The returned
+// error is a [ParseErrors] aggregating every error found.
 //
 // When this option is not set, the parser fails fast on the first syntax
 // error and the conformance corpus runs in this default mode.

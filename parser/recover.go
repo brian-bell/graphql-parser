@@ -97,3 +97,28 @@ func (p *parser) skipToSelectionStart() {
 		}
 	}
 }
+
+// skipToEOF advances to the end of a partial entry point after a root-level
+// value/type failure. It intentionally does not try to recover nested grammar.
+func (p *parser) skipToEOF() {
+	for {
+		tok, err := p.peek()
+		if err != nil {
+			if !p.recordError(err) {
+				return
+			}
+			if _, err2 := p.advance(); err2 != nil {
+				_ = p.recordError(err2)
+				return
+			}
+			continue
+		}
+		if tok.Kind == lexer.EOF {
+			return
+		}
+		if _, err := p.advance(); err != nil {
+			_ = p.recordError(err)
+			return
+		}
+	}
+}
