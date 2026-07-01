@@ -517,21 +517,23 @@ func TestParserValueAndTypeRecoveryConsumesLexerErrors(t *testing.T) {
 func TestDocumentRecoveryConsumesInitialLexerErrorsOnce(t *testing.T) {
 	p := parser.New(parser.WithRecovery())
 
-	t.Run("document", func(t *testing.T) {
-		doc, err := p.Parse(&ast.Source{Body: "?", Name: "doc-lexer-error.graphql"})
-		if doc != nil {
-			t.Fatalf("document = %T; want nil", doc)
-		}
-		assertParseErrors(t, err, 1)
-	})
+	for _, body := range []string{"?", "01"} {
+		t.Run("document/"+body, func(t *testing.T) {
+			doc, err := p.Parse(&ast.Source{Body: body, Name: "doc-lexer-error.graphql"})
+			if doc != nil {
+				t.Fatalf("document = %T; want nil", doc)
+			}
+			assertParseErrors(t, err, 1)
+		})
 
-	t.Run("schema", func(t *testing.T) {
-		doc, err := p.ParseSchema(&ast.Source{Body: "?", Name: "schema-lexer-error.graphql"})
-		if doc != nil {
-			t.Fatalf("schema document = %T; want nil", doc)
-		}
-		assertParseErrors(t, err, 1)
-	})
+		t.Run("schema/"+body, func(t *testing.T) {
+			doc, err := p.ParseSchema(&ast.Source{Body: body, Name: "schema-lexer-error.graphql"})
+			if doc != nil {
+				t.Fatalf("schema document = %T; want nil", doc)
+			}
+			assertParseErrors(t, err, 1)
+		})
+	}
 }
 
 func assertLocSource(t *testing.T, loc *ast.Loc, src *ast.Source) {

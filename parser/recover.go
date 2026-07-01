@@ -106,11 +106,11 @@ func (p *parser) skipToEOF() {
 		if err != nil {
 			// The caller already recorded the root failure that put the
 			// partial entry into recovery. Clear a cached lexer error without
-			// recording the same error again, then treat the rest of the entry
-			// as covered by the root BadValue/BadType placeholder.
+			// recording the same error again, then continue draining any
+			// remaining tokens as covered by the root recovery placeholder.
 			_, _ = p.advance()
 			p.lastEnd = len(p.source.Body)
-			return
+			continue
 		}
 		if tok.Kind == lexer.EOF {
 			return
