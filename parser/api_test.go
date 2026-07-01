@@ -514,6 +514,45 @@ func TestParserValueAndTypeRecoveryConsumesLexerErrors(t *testing.T) {
 	}
 }
 
+func TestParserValueAndTypeRecoveryStartsAtFirstNonIgnoredLexerError(t *testing.T) {
+	p := parser.New(parser.WithRecovery())
+	body := "  ?"
+	wantStart := 2
+
+	t.Run("value", func(t *testing.T) {
+		src := &ast.Source{Body: body, Name: "value-leading-lexer-error.graphql"}
+		v, err := p.ParseValue(src)
+		assertParseErrors(t, err, 1)
+		bad, ok := v.(*ast.BadValue)
+		if !ok {
+			t.Fatalf("value = %T; want *ast.BadValue", v)
+		}
+		assertBadLoc(t, bad.Err, bad.Loc, src, wantStart, len(src.Body))
+	})
+
+	t.Run("const value", func(t *testing.T) {
+		src := &ast.Source{Body: body, Name: "const-value-leading-lexer-error.graphql"}
+		v, err := p.ParseConstValue(src)
+		assertParseErrors(t, err, 1)
+		bad, ok := v.(*ast.BadValue)
+		if !ok {
+			t.Fatalf("const value = %T; want *ast.BadValue", v)
+		}
+		assertBadLoc(t, bad.Err, bad.Loc, src, wantStart, len(src.Body))
+	})
+
+	t.Run("type", func(t *testing.T) {
+		src := &ast.Source{Body: body, Name: "type-leading-lexer-error.graphql"}
+		typ, err := p.ParseType(src)
+		assertParseErrors(t, err, 1)
+		bad, ok := typ.(*ast.BadType)
+		if !ok {
+			t.Fatalf("type = %T; want *ast.BadType", typ)
+		}
+		assertBadLoc(t, bad.Err, bad.Loc, src, wantStart, len(src.Body))
+	})
+}
+
 func TestDocumentRecoveryConsumesInitialLexerErrorsOnce(t *testing.T) {
 	p := parser.New(parser.WithRecovery())
 

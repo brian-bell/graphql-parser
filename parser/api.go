@@ -206,9 +206,31 @@ func (p *Parser) parseValue(src *ast.Source, isConst bool) (ast.Value, error) {
 func partialEntryStart(p *parser) int {
 	tok, err := p.peek()
 	if err != nil {
-		return 0
+		return firstNonIgnoredOffset(p.source.Body)
 	}
 	return tok.Start
+}
+
+func firstNonIgnoredOffset(body string) int {
+	for pos := 0; pos < len(body); {
+		switch body[pos] {
+		case ' ', '\t', ',', '\n', '\r':
+			pos++
+		case 0xEF:
+			if pos+2 < len(body) && body[pos+1] == 0xBB && body[pos+2] == 0xBF {
+				pos += 3
+				continue
+			}
+			return pos
+		case '#':
+			for pos < len(body) && body[pos] != '\n' && body[pos] != '\r' {
+				pos++
+			}
+		default:
+			return pos
+		}
+	}
+	return len(body)
 }
 
 func (p *parser) partialEntryLoc(start int) *ast.Loc {
