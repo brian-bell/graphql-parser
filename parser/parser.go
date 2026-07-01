@@ -29,13 +29,16 @@ type prodScope struct {
 }
 
 func newParser(src *ast.Source, opts []Option) *parser {
-	cfg := newConfig(opts)
+	return newParserWithConfig(src, *newConfig(opts))
+}
+
+func newParserWithConfig(src *ast.Source, cfg config) *parser {
 	var lopts []lexer.Option
 	if cfg.preserveComments {
 		lopts = append(lopts, lexer.WithComments())
 	}
 	l := lexer.New(src, lopts...)
-	return &parser{source: src, lex: l, cfg: cfg}
+	return &parser{source: src, lex: l, cfg: &cfg}
 }
 
 // peek returns the next non-comment token without consuming it. When
