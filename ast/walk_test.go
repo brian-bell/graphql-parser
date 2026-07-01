@@ -61,6 +61,36 @@ func TestWalk_DescendsIntoCustomNodeChildren(t *testing.T) {
 	}
 }
 
+type customDocumentWrapper struct {
+	*ast.Document
+	children []ast.Node
+}
+
+func (n *customDocumentWrapper) Children() []ast.Node { return n.children }
+
+func TestWalk_UsesCustomChildrenForEmbeddedBuiltInNode(t *testing.T) {
+	child := &ast.IntValue{Value: "1"}
+	embedded := &ast.Document{
+		Definitions: ast.DefinitionList{&ast.OperationDefinition{
+			SelectionSet: &ast.SelectionSet{},
+		}},
+	}
+	root := &customDocumentWrapper{
+		Document: embedded,
+		children: []ast.Node{child},
+	}
+
+	r := &recordVisitor{}
+	ast.Walk(r, root)
+
+	if len(r.visited) != 2 {
+		t.Fatalf("visited %d nodes; want root and custom child: %#v", len(r.visited), r.visited)
+	}
+	if r.visited[0] != root || r.visited[1] != child {
+		t.Fatalf("visited %#v; want root then custom child", r.visited)
+	}
+}
+
 func TestWalk_MatchesRecursiveChildrenOrderForBuiltInNodes(t *testing.T) {
 	doc, err := parser.Parse(`
 		query Q($v: [Int!]! = [1]) @trace(arg: {nested: [true, null, ENUM]}) {

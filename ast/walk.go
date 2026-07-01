@@ -8,10 +8,6 @@ type Visitor interface {
 	Visit(node Node) Visitor
 }
 
-type childWalker interface {
-	walkChildren(Visitor)
-}
-
 // Walk performs a depth-first, source-order traversal of node and its
 // children. It does not visit Comments or descend into BadValue/BadType/
 // BadField/BadDefinition placeholder nodes — they are leaves for traversal
@@ -24,13 +20,88 @@ func Walk(v Visitor, node Node) {
 	if v == nil {
 		return
 	}
-	if walker, ok := node.(childWalker); ok {
-		walker.walkChildren(v)
+	if walkBuiltInChildren(v, node) {
 		return
 	}
 	for _, child := range node.Children() {
 		Walk(v, child)
 	}
+}
+
+func walkBuiltInChildren(v Visitor, node Node) bool {
+	switch n := node.(type) {
+	case *Document:
+		n.walkChildren(v)
+	case *OperationDefinition:
+		n.walkChildren(v)
+	case *FragmentDefinition:
+		n.walkChildren(v)
+	case *VariableDefinition:
+		n.walkChildren(v)
+	case *SelectionSet:
+		n.walkChildren(v)
+	case *Field:
+		n.walkChildren(v)
+	case *FragmentSpread:
+		n.walkChildren(v)
+	case *InlineFragment:
+		n.walkChildren(v)
+	case *Argument:
+		n.walkChildren(v)
+	case *Directive:
+		n.walkChildren(v)
+	case *ListValue:
+		n.walkChildren(v)
+	case *ObjectValue:
+		n.walkChildren(v)
+	case *ObjectField:
+		n.walkChildren(v)
+	case *ListType:
+		n.walkChildren(v)
+	case *NonNullType:
+		n.walkChildren(v)
+	case *SchemaDefinition:
+		n.walkChildren(v)
+	case *SchemaExtension:
+		n.walkChildren(v)
+	case *OperationTypeDefinition:
+		n.walkChildren(v)
+	case *ScalarTypeDefinition:
+		n.walkChildren(v)
+	case *ScalarTypeExtension:
+		n.walkChildren(v)
+	case *ObjectTypeDefinition:
+		n.walkChildren(v)
+	case *ObjectTypeExtension:
+		n.walkChildren(v)
+	case *InterfaceTypeDefinition:
+		n.walkChildren(v)
+	case *InterfaceTypeExtension:
+		n.walkChildren(v)
+	case *UnionTypeDefinition:
+		n.walkChildren(v)
+	case *UnionTypeExtension:
+		n.walkChildren(v)
+	case *EnumTypeDefinition:
+		n.walkChildren(v)
+	case *EnumTypeExtension:
+		n.walkChildren(v)
+	case *InputObjectTypeDefinition:
+		n.walkChildren(v)
+	case *InputObjectTypeExtension:
+		n.walkChildren(v)
+	case *FieldDefinition:
+		n.walkChildren(v)
+	case *InputValueDefinition:
+		n.walkChildren(v)
+	case *EnumValueDefinition:
+		n.walkChildren(v)
+	case *DirectiveDefinition:
+		n.walkChildren(v)
+	default:
+		return false
+	}
+	return true
 }
 
 func walkNode(v Visitor, child Node) {
